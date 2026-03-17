@@ -1,0 +1,30 @@
+﻿@page "/uam3/ServicesDesk/retiros-user"
+@using Data.Interfaces.CapaApp.IServiceDesk
+@using Data.Interfaces.CapaApp.IServicesCrucesExcel
+@using Radzen
+@using Shared.CapaAplicacion.UserDisable
+@inject IRetirosAppService RetirosAppService
+@inject NotificationService NotificationService
+
+<PageTitle>Uam3 - Retiros App</PageTitle>
+
+<RadzenStack Orientation="Orientation.Vertical" Gap="1rem">
+    <RadzenText Text="Gestion de Retiros por Aplicacion" TextStyle="TextStyle.H4" />
+    <RadzenText Text="Administracion de usuarios retirados y generacion de OC." TextStyle="TextStyle.Body1" />
+
+    <RadzenTabs RenderMode="TabRenderMode.Client">
+        <Tabs>
+            <RadzenTabsItem Text="Crear OC">
+                <CrearOC />
+            </RadzenTabsItem>
+
+            <RadzenTabsItem Text="Validar Oc">
+                <ValidarOc />
+            </RadzenTabsItem>
+
+            <RadzenTabsItem Text="Agregar Manual">
+                <CargaManualOc />
+            </RadzenTabsItem>
+        </Tabs>
+    </RadzenTabs>
+</RadzenStack>

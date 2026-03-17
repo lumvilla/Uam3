@@ -1,0 +1,196 @@
+﻿@rendermode InteractiveServer
+@inherits LayoutComponentBase
+@using Radzen
+@using Radzen.Blazor
+
+<RadzenLayout Style="min-height:100vh">
+    <RadzenHeader>
+        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="1rem" Class="rz-p-2">
+            <RadzenSidebarToggle Click="@(() => sidebarExpanded = !sidebarExpanded)" />
+            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
+                <RadzenIcon Icon="security" Style="font-size: 28px; color: var(--rz-primary);" />
+                <RadzenStack Gap="0" Orientation="Orientation.Vertical">
+                    <RadzenText Text="Control de Retiros" TextStyle="TextStyle.H6" Style="margin: 0; font-weight: 600;" />
+                    <RadzenText Text="Sistema de Gestion" TextStyle="TextStyle.Caption" Style="margin: 0; font-weight: 600;" />
+                </RadzenStack>
+            </RadzenStack>
+        </RadzenStack>
+    </RadzenHeader>
+
+    <RadzenSidebar @bind-Expanded="sidebarExpanded" Style="width: 300px;">
+        <div class="rz-p-4">
+            <RadzenPanelMenu>
+                @* 1. Cargue de Insumos *@
+                <RadzenPanelMenuItem Text="Cargue de Insumos" Icon="folder_open" Style="font-weight: 600; background-color: var(--rz-base-100);">
+                    <RadzenPanelMenuItem Text="DA/Retiros/Terceros" Icon="upload" Path="/cargue-retiros" Style="padding-left: 2rem;" />
+                </RadzenPanelMenuItem>
+
+                @* 2. UAM3 *@
+                <RadzenPanelMenuItem Text="UAM3" Icon="admin_panel_settings" Style="font-weight: 600; margin-top: 0.5rem; background-color: var(--rz-base-100);">
+
+                    @* Capa Aplicación *@
+                    <RadzenPanelMenuItem Text="Capa Aplicación" Icon="layers" Style="font-weight: 500; background-color: var(--rz-base-200); padding-left: 1.5rem;">
+                        <RadzenPanelMenuItem Text="Cargue de Insumos" Icon="cloud_upload" Path="/uam3/cargue-insumos-app" Style="padding-left: 3rem;" />
+                        <RadzenPanelMenuItem Text="Usuarios a Deshabilitar" Icon="person_remove" Path="/uam3/user-disable" Style="padding-left: 3rem;" />
+                        <RadzenPanelMenuItem Text="Service Desk" Icon="support_agent" Path="/uam3/ServicesDesk/retiros-user" Style="padding-left: 3rem;" />
+                        <RadzenPanelMenuItem Text="Reportes" Icon="assessment" Path="/uam3/reportes" Style="padding-left: 3rem;" />
+                    </RadzenPanelMenuItem>
+
+                    @* Capa Base de Datos *@
+                    <RadzenPanelMenuItem Text="Capa Base de Datos" Icon="storage" Style="font-weight: 500; background-color: var(--rz-base-200); padding-left: 1.5rem;">
+                        <RadzenPanelMenuItem Text="Cargue de Insumos" Icon="cloud_upload" Path="/uam3/cargue-insumos-bd" Style="padding-left: 3rem;" />
+                        <RadzenPanelMenuItem Text="Usuarios a Deshabilitar" Icon="person_remove" Path="/uam3/user-disable-Bd" Style="padding-left: 3rem;" />
+                        <RadzenPanelMenuItem Text="Service Desk" Icon="support_agent" Path="/uam3/service-desk" Style="padding-left: 3rem;" />
+                        <RadzenPanelMenuItem Text="Reportes" Icon="assessment" Path="/uam3/reportes-bd" Style="padding-left: 3rem;" />
+                    </RadzenPanelMenuItem>
+                </RadzenPanelMenuItem>
+
+                @* 3. Retiros No Sox *@
+                <RadzenPanelMenuItem Text="Retiros No Sox" Icon="group_remove" Style="font-weight: 600; margin-top: 0.5rem; background-color: var(--rz-base-100);">
+                    <RadzenPanelMenuItem Text="Cargue de Insumos" Icon="cloud_upload" Path="/nosox/cargue-insumos" Style="padding-left: 2rem;" />
+                    <RadzenPanelMenuItem Text="Usuarios a Deshabilitar" Icon="person_remove" Path="/nosox/user-disable" Style="padding-left: 2rem;" />
+
+                    <RadzenPanelMenuItem Text="Service Desk" Icon="support_agent" Style="font-weight: 500; background-color: var(--rz-base-200); padding-left: 2rem;">
+                        <RadzenPanelMenuItem Text="Generar OC Retiros" Icon="add_task" Path="/nosox/sd/realizar-oc" Style="padding-left: 3.5rem;" />
+                        <RadzenPanelMenuItem Text="Validar Estado OC" Icon="fact_check" Path="/nosox/sd/consultar-estado" Style="padding-left: 3.5rem;" />
+                    </RadzenPanelMenuItem>
+
+                    <RadzenPanelMenuItem Text="Reportes" Icon="assessment" Path="/nosox/reportes" Style="padding-left: 2rem;" />
+                </RadzenPanelMenuItem>
+
+                @* 4. Consola SQL *@
+                <RadzenPanelMenuItem Text="Ejecutar SQL" Icon="terminal" Path="/sql-console" Style="font-weight: 600; margin-top: 0.5rem; background-color: var(--rz-base-100);" />
+
+                @* 5. Guía *@
+                <RadzenPanelMenuItem Text="Guía de Usuario" Icon="help" Path="/guia" Style="font-weight: 600; margin-top: 0.5rem; background-color: var(--rz-base-100);" />
+
+            </RadzenPanelMenu>
+        </div>
+
+        @* Información del Usuario en el Sidebar *@
+        <div style="position: absolute; bottom: 0; width: 100%; border-top: 1px solid var(--rz-border-color); padding: 1rem; background-color: var(--rz-base-50);">
+            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
+                <RadzenIcon Icon="account_circle" Style="font-size: 32px; color: var(--rz-primary);" />
+                <RadzenStack Gap="0" Style="flex: 1;">
+                    <RadzenText Text="Control Retiros" TextStyle="TextStyle.Body2" Style="margin: 0; font-weight: 500;" />
+                    <RadzenText Text="©️Eimer Yesith 2025" TextStyle="TextStyle.Caption" Style="margin: 0; color: var(--rz-text-secondary-color);" />
+                </RadzenStack>
+            </RadzenStack>
+        </div>
+    </RadzenSidebar>
+
+    <RadzenBody>
+        <div class="rz-p-4" style="background-color: var(--rz-base-50); min-height: calc(100vh - 120px);">
+            <RadzenCard Style="margin-bottom: 1rem;">
+                @Body
+            </RadzenCard>
+        </div>
+    </RadzenBody>
+
+    <RadzenFooter Style="text-align: center; padding: 1rem; background-color: var(--rz-base-100); border-top: 1px solid var(--rz-border-color);">
+        <RadzenStack Orientation="Orientation.Vertical" Gap="0.25rem" AlignItems="AlignItems.Center">
+            <RadzenText Text="@($"© {DateTime.Now.Year} Control de Retiros - Sistema de Gestión UAM")" TextStyle="TextStyle.Body2" Style="margin: 0;" />
+            <RadzenText Text="Desarrollo por Eimer Yesith" TextStyle="TextStyle.Caption" Style="margin: 0; color: var(--rz-text-secondary-color);" />
+        </RadzenStack>
+    </RadzenFooter>
+</RadzenLayout>
+
+@* ⚠️ CRÍTICO: Componentes necesarios para Radzen *@
+<RadzenDialog />
+<RadzenNotification />
+<RadzenContextMenu />
+<RadzenTooltip />
+
+<style>
+    /* Mejoras visuales para el menú */
+    .rz-panel-menu-item-wrapper {
+        margin-bottom: 2px;
+        border-radius: 4px;
+        transition: all 0.2s ease;
+    }
+
+        .rz-panel-menu-item-wrapper:hover {
+            background-color: var(--rz-primary-lighter) !important;
+        }
+
+        .rz-panel-menu-item-wrapper.rz-state-active {
+            background-color: var(--rz-primary) !important;
+            color: white !important;
+        }
+
+            .rz-panel-menu-item-wrapper.rz-state-active .rz-panel-menu-item-text,
+            .rz-panel-menu-item-wrapper.rz-state-active .rz-panel-menu-item-icon {
+                color: white !important;
+            }
+
+    /* Separadores visuales entre secciones principales */
+    .rz-panel-menu > .rz-panel-menu-item-wrapper {
+        border-left: 3px solid transparent;
+    }
+
+        .rz-panel-menu > .rz-panel-menu-item-wrapper:hover {
+            border-left-color: var(--rz-primary);
+        }
+
+    /* Iconos con mejor espaciado */
+    .rz-panel-menu-item-icon {
+        margin-right: 0.75rem;
+        font-size: 20px;
+    }
+
+    /* Texto del menú */
+    .rz-panel-menu-item-text {
+        font-size: 14px;
+    }
+
+    /* Submenús con mejor indentación visual */
+    .rz-panel-menu-item-wrapper .rz-panel-menu-item-wrapper {
+        margin-left: 0;
+        border-left: 2px solid var(--rz-base-300);
+    }
+
+    /* Animación suave para expansión de menús */
+    .rz-panel-menu-item-children {
+        transition: all 0.3s ease-in-out;
+    }
+
+    /* Card del body con sombra sutil */
+    .rz-card {
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        border: 1px solid var(--rz-border-color);
+    }
+
+    /* Header mejorado */
+    .rz-header {
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        z-index: 1000;
+    }
+
+    /* Sidebar con mejor apariencia */
+    .rz-sidebar {
+        box-shadow: 2px 0 8px rgba(0, 0, 0, 0.08);
+        border-right: 1px solid var(--rz-border-color);
+    }
+
+        /* Scroll personalizado para el sidebar */
+        .rz-sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .rz-sidebar::-webkit-scrollbar-track {
+            background: var(--rz-base-100);
+        }
+
+        .rz-sidebar::-webkit-scrollbar-thumb {
+            background: var(--rz-base-400);
+            border-radius: 3px;
+        }
+
+            .rz-sidebar::-webkit-scrollbar-thumb:hover {
+                background: var(--rz-base-500);
+            }
+</style>
+
+@code {
+    bool sidebarExpanded = true;
+}

@@ -1,0 +1,24 @@
+﻿@rendermode InteractiveServer
+@using Microsoft.AspNetCore.Components.Routing
+@using RetirosUIBlazor.Components.Layout
+
+<Router AppAssembly="@typeof(Program).Assembly">
+    <Found Context="routeData">
+        <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
+        <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+    </Found>
+    <NotFound>
+        <PageTitle>No encontrado</PageTitle>
+        <LayoutView Layout="@typeof(MainLayout)">
+            <div class="rz-p-4">
+                <h1 class="rz-text-h3">Página no encontrada</h1>
+                <p class="rz-text-body1">Lo sentimos, no pudimos encontrar esta página.</p>
+                <RadzenButton Text="Volver al inicio" Icon="home" Click="@(() => NavigationManager.NavigateTo("/"))" />
+            </div>
+        </LayoutView>
+    </NotFound>
+</Router>
+
+@code {
+    [Inject] private NavigationManager NavigationManager { get; set; } = default!;
+}

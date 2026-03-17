@@ -1,0 +1,654 @@
+﻿@using Data.Interfaces.CapaApp.IServiceDesk
+@using Data.Interfaces.CapaApp.IServicesCrucesExcel
+@using Shared.CapaAplicacion.UserDisable
+@using Radzen
+@inject IRetirosAppService RetirosAppService
+@inject NotificationService NotificationService
+
+<div>
+    <RadzenStack Orientation="Orientation.Vertical" Gap="1rem">
+        <RadzenText Text="Carga Manual de Órdenes de Cambio" TextStyle="TextStyle.H6" />
+
+        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="1rem">
+            <RadzenButton Text="@(isLoadingData ? "Cargando..." : "Cargar Datos")"
+                          ButtonStyle="ButtonStyle.Primary"
+                          Icon="@(isLoadingData ? "hourglass_empty" : "refresh")"
+                          Click="CargarDatosTemporales"
+                          Disabled="@isLoadingData"
+                          Size="ButtonSize.Medium" />
+
+            @if (ultimaCarga != null)
+            {
+                <RadzenText TextStyle="TextStyle.Caption"
+                            Text="@($"Última carga: {ultimaCarga.Value:dd/MM/yyyy HH:mm:ss}")" />
+            }
+
+            @if (hayDatos)
+            {
+                <RadzenText TextStyle="TextStyle.Subtitle2"
+                            Text="@($"Total registros: {totalRegistros}")"
+                            class="rz-color-success" />
+            }
+        </RadzenStack>
+
+        @if (isLoadingData)
+        {
+            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
+                <RadzenProgressBar Value="100" ShowValue="false" Mode="ProgressBarMode.Indeterminate" Style="width: 300px;" />
+                <RadzenText Text="Cargando datos..." TextStyle="TextStyle.Body2" />
+            </RadzenStack>
+        }
+
+        @if (!hayDatos && !isLoadingData)
+        {
+            <RadzenAlert Severity="AlertSeverity.Info" AllowClose="false" Variant="Variant.Flat">
+                No hay datos cargados. Haga clic en "Cargar Datos" para obtener la información.
+            </RadzenAlert>
+        }
+
+        @if (hayDatos)
+        {
+            <div class="rz-p-sm-12">
+                <RadzenAccordion Multiple="true">
+                    <Items>
+                        @* Portal *@
+                        @RenderAccordionItem("portal", retirosPortal, "CRM Portal", "web")
+
+                        @* Directorio Activo *@
+                        @RenderAccordionItem("da", retirosDA, "Directorio Activo", "folder_shared")
+
+                        @* Siebel Movil *@
+                        @RenderAccordionItem("siebelmovil", retirosSiebelMovil, "Siebel Móvil", "smartphone")
+
+                        @* Siebel Fijo *@
+                        @RenderAccordionItem("siebelfijo", retirosSiebelFijo, "Siebel Fijo", "desktop_windows")
+
+                        @* Fenix *@
+                        @RenderAccordionItem("fenix", retirosFenix, "Fenix", "whatshot")
+
+                        @* Open Une *@
+                        @RenderAccordionItem("open", retirosOpen, "Open Une", "settings_input_component")
+
+                        @* DWH Movil *@
+                        @RenderAccordionItem("dwhmovil", retirosDwhMovil, "DWH Móvil", "storage")
+
+                        @* DWH Fijo *@
+                        @RenderAccordionItem("dwhfijo", retirosDwhFijo, "DWH Fijo", "dns")
+
+                        @* SAP ERP *@
+                        @RenderAccordionItem("saperp", retirosSapErp, "SAP ERP", "business")
+
+                        @* SAP GRC *@
+                        @RenderAccordionItem("sapgrc", retirosSapGrc, "SAP GRC", "security")
+
+                        @* IAM *@
+                        @RenderAccordionItem("iam", retirosIam, "IAM", "groups")
+                    </Items>
+                </RadzenAccordion>
+            </div>
+        }
+    </RadzenStack>
+</div>
+
+@code {
+    private bool isLoadingData = false;
+    private bool hayDatos = false;
+    private DateTime? ultimaCarga;
+    private int totalRegistros = 0;
+
+    private Dictionary<string, bool> processingByApp = new(StringComparer.OrdinalIgnoreCase);
+    private Dictionary<string, string> selectedTipoCruce = new(StringComparer.OrdinalIgnoreCase);
+    private Dictionary<string, string> selectedFechaCargue = new(StringComparer.OrdinalIgnoreCase);
+    private Dictionary<string, string> numeroOCManual = new(StringComparer.OrdinalIgnoreCase);
+    private Dictionary<string, string> estadoOCManual = new(StringComparer.OrdinalIgnoreCase);
+
+    private IEnumerable<RetirosUserApp> retirosPortal = Enumerable.Empty<RetirosUserApp>();
+    private IEnumerable<RetirosUserApp> retirosDA = Enumerable.Empty<RetirosUserApp>();
+    private IEnumerable<RetirosUserApp> retirosSiebelMovil = Enumerable.Empty<RetirosUserApp>();
+    private IEnumerable<RetirosUserApp> retirosSiebelFijo = Enumerable.Empty<RetirosUserApp>();
+    private IEnumerable<RetirosUserApp> retirosFenix = Enumerable.Empty<RetirosUserApp>();
+    private IEnumerable<RetirosUserApp> retirosOpen = Enumerable.Empty<RetirosUserApp>();
+    private IEnumerable<RetirosUserApp> retirosDwhMovil = Enumerable.Empty<RetirosUserApp>();
+    private IEnumerable<RetirosUserApp> retirosDwhFijo = Enumerable.Empty<RetirosUserApp>();
+    private IEnumerable<RetirosUserApp> retirosSapErp = Enumerable.Empty<RetirosUserApp>();
+    private IEnumerable<RetirosUserApp> retirosSapGrc = Enumerable.Empty<RetirosUserApp>();
+    private IEnumerable<RetirosUserApp> retirosIam = Enumerable.Empty<RetirosUserApp>();
+
+    protected override void OnInitialized()
+    {
+        var apps = new[] { "portal", "da", "siebelmovil", "siebelfijo", "fenix", "open", "dwhmovil", "dwhfijo", "saperp", "sapgrc", "iam" };
+        foreach (var a in apps)
+        {
+            if (!selectedTipoCruce.ContainsKey(a)) selectedTipoCruce[a] = "AMBOS";
+            if (!processingByApp.ContainsKey(a)) processingByApp[a] = false;
+            if (!selectedFechaCargue.ContainsKey(a)) selectedFechaCargue[a] = "";
+            if (!numeroOCManual.ContainsKey(a)) numeroOCManual[a] = "";
+            if (!estadoOCManual.ContainsKey(a)) estadoOCManual[a] = "";
+        }
+    }
+
+    private RenderFragment RenderAccordionItem(string app, IEnumerable<RetirosUserApp> data, string displayName, string icon)
+    {
+        return @<RadzenAccordionItem Text="@($"{displayName} - Total: {data?.Count() ?? 0}")" Icon="@icon">
+            <RadzenStack Gap="0.5rem">
+                <RadzenText TextStyle="TextStyle.Caption" Text="@($"Total registros: {data?.Count() ?? 0}")" />
+                @RenderSeccionCargaManual(app, data, true)
+
+                <RadzenTabs RenderMode="TabRenderMode.Client">
+                    <Tabs>
+                        <RadzenTabsItem Text="Por Login">
+                            <RadzenStack Gap="0.5rem">
+                                <RadzenText TextStyle="TextStyle.Caption"
+                                            Text="@($"Registros: {data?.Count(x => x.TipoCruce == "LOGIN") ?? 0}")"
+                                            class="rz-color-success" />
+                                @RenderDataGrid(data?.Where(x => x.TipoCruce == "LOGIN"))
+                            </RadzenStack>
+                        </RadzenTabsItem>
+
+                        <RadzenTabsItem Text="Por Cédula">
+                            <RadzenStack Gap="0.5rem">
+                                <RadzenText TextStyle="TextStyle.Caption"
+                                            Text="@($"Registros: {data?.Count(x => x.TipoCruce == "CEDULA") ?? 0}")"
+                                            class="rz-color-info" />
+                                <RadzenAlert Severity="AlertSeverity.Info" AllowClose="false" Variant="Variant.Flat" Size="AlertSize.ExtraSmall">
+                                    Estos usuarios coinciden por número de documento pero su Login no coincidía o era diferente.
+                                </RadzenAlert>
+                                @RenderDataGrid(data?.Where(x => x.TipoCruce == "CEDULA"))
+                            </RadzenStack>
+                        </RadzenTabsItem>
+                    </Tabs>
+                </RadzenTabs>
+            </RadzenStack>
+        </RadzenAccordionItem>;
+    }
+
+    private IEnumerable<string> GetFechasCargue(string app)
+    {
+        var data = GetDataForApp(app);
+
+        if (data == null || !data.Any())
+        {
+            return Enumerable.Empty<string>();
+        }
+
+        return data.Select(x => x.FechaEjecucion.ToString("yyyy-MM-dd"))
+                   .Distinct()
+                   .OrderByDescending(x => x)
+                   .ToList();
+    }
+
+    private IEnumerable<RetirosUserApp> GetDataForApp(string app)
+    {
+        return app.ToLower() switch
+        {
+            "portal" => retirosPortal,
+            "da" => retirosDA,
+            "siebelmovil" => retirosSiebelMovil,
+            "siebelfijo" => retirosSiebelFijo,
+            "fenix" => retirosFenix,
+            "open" => retirosOpen,
+            "dwhmovil" => retirosDwhMovil,
+            "dwhfijo" => retirosDwhFijo,
+            "saperp" => retirosSapErp,
+            "sapgrc" => retirosSapGrc,
+            "iam" => retirosIam,
+            _ => Enumerable.Empty<RetirosUserApp>()
+        };
+    }
+
+    private RenderFragment RenderSeccionCargaManual(string app, IEnumerable<RetirosUserApp> data, bool tieneTipoCruce)
+    {
+        var fechas = GetFechasCargue(app).ToList();
+        var fechaSeleccionada = selectedFechaCargue.GetValueOrDefault(app, "");
+        var numeroOC = numeroOCManual.GetValueOrDefault(app, "");
+        var estadoOC = estadoOCManual.GetValueOrDefault(app, "");
+        var botonDeshabilitado = processingByApp.GetValueOrDefault(app, false) || !hayDatos ||
+                                 string.IsNullOrEmpty(fechaSeleccionada) ||
+                                 string.IsNullOrWhiteSpace(numeroOC) ||
+                                 string.IsNullOrWhiteSpace(estadoOC);
+
+        return @<div class="rz-p-4" style="background-color: #f5f5f5; border-radius: 4px; margin-bottom: 1rem;">
+            <RadzenStack Orientation="Orientation.Vertical" Gap="1rem">
+                <RadzenText Text="Carga Manual de OC:" TextStyle="TextStyle.Subtitle2" TagName="TagName.H6" />
+
+                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="1rem" Wrap="FlexWrap.Wrap">
+
+                    @if (fechas.Any())
+                    {
+                        <RadzenStack Orientation="Orientation.Vertical" Gap="0.25rem" Style="min-width: 200px;">
+                            <RadzenLabel Text="Fecha de Cargue:" Style="font-weight: 500;" />
+                            <RadzenDropDown @bind-Value="selectedFechaCargue[app]"
+                                            Data="@fechas"
+                                            Placeholder="Seleccione fecha"
+                                            Style="width:200px;"
+                                            Disabled="@(!hayDatos)"
+                                            Change="@(() => StateHasChanged())" />
+                        </RadzenStack>
+                    }
+
+                    @if (tieneTipoCruce)
+                    {
+                        <RadzenStack Orientation="Orientation.Vertical" Gap="0.25rem" Style="min-width: 200px;">
+                            <RadzenLabel Text="Tipo Cruce:" Style="font-weight: 500;" />
+                            <RadzenDropDown @bind-Value="selectedTipoCruce[app]"
+                                            Data="@(new[] {
+                                                                                new { Key = "AMBOS", Text = "Ambos" },
+                                                                                new { Key = "LOGIN", Text = "Login" },
+                                                                                new { Key = "CEDULA", Text = "Cédula" }
+                                                                            })"
+                                TextProperty="Text"
+                                ValueProperty="Key"
+                                Placeholder="Seleccione tipo"
+                                Style="width:200px;"
+                                Disabled="@(!hayDatos)"
+                                Change="@(() => StateHasChanged())" />
+            </RadzenStack>
+                        }
+
+                    <RadzenStack Orientation="Orientation.Vertical" Gap="0.25rem" Style="min-width: 250px;">
+                        <RadzenLabel Text="Número de OC:" Style="font-weight: 500;" />
+                        <RadzenTextBox @bind-Value="numeroOCManual[app]"
+                                       Placeholder="Ingrese el número de OC"
+                                       Style="width:250px;"
+                                       Disabled="@(!hayDatos)"
+                                       Change="@(() => StateHasChanged())" />
+                    </RadzenStack>
+
+                    <RadzenStack Orientation="Orientation.Vertical" Gap="0.25rem" Style="min-width: 200px;">
+                        <RadzenLabel Text="Estado de OC:" Style="font-weight: 500;" />
+                        <RadzenDropDown @bind-Value="estadoOCManual[app]"
+                                        Data="@(new[] {
+                                                                            new { Key = "PENDIENTE", Text = "Pendiente" },
+                                                                            new { Key = "EN_PROCESO", Text = "En Proceso" },
+                                                                            new { Key = "APROBADA", Text = "Aprobada" },
+                                                                            new { Key = "RECHAZADA", Text = "Rechazada" },
+                                                                            new { Key = "COMPLETADA", Text = "Completada" }
+                                                                        })"
+                                TextProperty="Text"
+                                ValueProperty="Key"
+                                Placeholder="Seleccione estado"
+                                Style="width:200px;"
+                                Disabled="@(!hayDatos)"
+                                Change="@(() => StateHasChanged())" />
+            </RadzenStack>
+
+                </RadzenStack>
+
+                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="1rem" Wrap="FlexWrap.Wrap">
+                    <RadzenButton Text="@(processingByApp.GetValueOrDefault(app, false) ? "Guardando..." : "Guardar OC Manual")"
+                                  ButtonStyle="ButtonStyle.Success"
+                                  Icon="@(processingByApp.GetValueOrDefault(app, false) ? "hourglass_empty" : "save")"
+                                  Size="ButtonSize.Small"
+                                  Disabled="@botonDeshabilitado"
+                                  Click="@(() => GuardarOCManual(app))" />
+
+            @if (!hayDatos)
+                    {
+                        <RadzenText Text="Cargue los datos primero."
+                                    TextStyle="TextStyle.Caption"
+                                    class="rz-color-warning" />
+                    }
+                    else if (string.IsNullOrEmpty(fechaSeleccionada))
+                    {
+                        <RadzenText Text="Seleccione una fecha de cargue."
+                                    TextStyle="TextStyle.Caption"
+                                    class="rz-color-info" />
+                    }
+                    else if (string.IsNullOrWhiteSpace(numeroOC))
+                    {
+                        <RadzenText Text="Ingrese el número de OC."
+                                    TextStyle="TextStyle.Caption"
+                                    class="rz-color-warning" />
+                    }
+                    else if (string.IsNullOrWhiteSpace(estadoOC))
+                    {
+                        <RadzenText Text="Seleccione el estado de OC."
+                                    TextStyle="TextStyle.Caption"
+                                    class="rz-color-warning" />
+                    }
+                </RadzenStack>
+
+                <RadzenAlert Severity="AlertSeverity.Info" AllowClose="false" Variant="Variant.Flat" Size="AlertSize.Small">
+                    <strong>Nota:</strong> La fecha de OC se asignará automáticamente con la fecha actual (@DateTime.Now.ToString("dd/MM/yyyy")).
+                    Esta OC se aplicará a todos los registros con la fecha de cargue seleccionada.
+                </RadzenAlert>
+            </RadzenStack>
+        </div>;
+    }
+
+    private RenderFragment RenderDataGrid(IEnumerable<RetirosUserApp> data)
+    {
+        if (data == null) data = Enumerable.Empty<RetirosUserApp>();
+
+        return @<RadzenDataGrid Data="@data"
+                                        AllowFiltering="true"
+                                        AllowSorting="true"
+                                        AllowPaging="true"
+                                        PageSize="10"
+                                        AllowColumnResize="true"
+                                        Density="Density.Compact"
+                                        EmptyText="No hay registros para mostrar"
+                                        FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                        TItem="RetirosUserApp">
+            <Columns>
+                <RadzenDataGridColumn TItem="RetirosUserApp" Property="FechaEjecucion" Title="Fecha Ejecución" Width="140px" Filterable="true" Sortable="true" />
+                <RadzenDataGridColumn TItem="RetirosUserApp" Property="App" Title="Aplicación" Width="120px" Filterable="true" Sortable="true" />
+                <RadzenDataGridColumn TItem="RetirosUserApp" Property="CedulaConsolidado" Title="Cédula Consolidado" Width="130px" Filterable="true" Sortable="true" />
+                <RadzenDataGridColumn TItem="RetirosUserApp" Property="LoginConsolidado" Title="Login Consolidado" Width="150px" Filterable="true" Sortable="true" />
+                <RadzenDataGridColumn TItem="RetirosUserApp" Property="NombreConsolidado" Title="Nombre" Width="200px" Filterable="true" Sortable="true" />
+                <RadzenDataGridColumn TItem="RetirosUserApp" Property="EstadoConsolidado" Title="Estado Consolidado" Width="140px" Filterable="true" Sortable="true" />
+                <RadzenDataGridColumn TItem="RetirosUserApp" Property="FechaRetiro" Title="Fecha Retiro" Width="120px" Filterable="true" Sortable="true" />
+                <RadzenDataGridColumn TItem="RetirosUserApp" Property="TipoCruce" Title="Tipo Cruce" Width="100px" Filterable="true" Sortable="true" />
+                <RadzenDataGridColumn TItem="RetirosUserApp" Property="CedulaApp" Title="Cédula App" Width="120px" Filterable="true" Sortable="true" />
+                <RadzenDataGridColumn TItem="RetirosUserApp" Property="LoginApp" Title="Login App" Width="150px" Filterable="true" Sortable="true" />
+                <RadzenDataGridColumn TItem="RetirosUserApp" Property="EstadoApp" Title="Estado App" Width="150px" Filterable="true" Sortable="true" />
+                <RadzenDataGridColumn TItem="RetirosUserApp" Property="NumeroOc" Title="Número OC" Width="130px" Filterable="true" Sortable="true">
+                    <Template Context="retiro">
+                        @if (!string.IsNullOrEmpty(retiro.NumeroOc))
+                        {
+                            <RadzenBadge Text="@retiro.NumeroOc" BadgeStyle="BadgeStyle.Success" />
+                        }
+                        else
+                        {
+                            <RadzenText Text="-" TextStyle="TextStyle.Caption" />
+                        }
+                    </Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="RetirosUserApp" Property="FechaOc" Title="Fecha OC" Width="120px" Filterable="true" Sortable="true" />
+                <RadzenDataGridColumn TItem="RetirosUserApp" Property="EstadoOc" Title="Estado OC" Width="130px" Filterable="true" Sortable="true">
+                    <Template Context="retiro">
+                        @if (!string.IsNullOrEmpty(retiro.EstadoOc))
+                        {
+                            <RadzenBadge Text="@retiro.EstadoOc"
+                                         BadgeStyle="@GetBadgeStyle(retiro.EstadoOc)"
+                                         Variant="Variant.Flat" />
+                        }
+                        else
+                        {
+                            <RadzenText Text="-" TextStyle="TextStyle.Caption" />
+                        }
+                    </Template>
+                </RadzenDataGridColumn>
+            </Columns>
+        </RadzenDataGrid>;
+    }
+
+    private BadgeStyle GetBadgeStyle(string estado)
+    {
+        return estado?.ToUpper() switch
+        {
+            "COMPLETADA" => BadgeStyle.Success,
+            "APROBADA" => BadgeStyle.Success,
+            "EN_PROCESO" => BadgeStyle.Info,
+            "PENDIENTE" => BadgeStyle.Warning,
+            "RECHAZADA" => BadgeStyle.Danger,
+            _ => BadgeStyle.Secondary
+        };
+    }
+
+    private async Task CargarDatosTemporales()
+    {
+        isLoadingData = true;
+        StateHasChanged();
+
+        await Task.Delay(50);
+
+        try
+        {
+            var todosLosDatos = await RetirosAppService.ObtenerDatosTemporales();
+
+            if (todosLosDatos != null && todosLosDatos.Any())
+            {
+                retirosPortal = todosLosDatos.Where(x => x.App?.Equals("portal", StringComparison.OrdinalIgnoreCase) == true);
+                retirosDA = todosLosDatos.Where(x => x.App?.Equals("da", StringComparison.OrdinalIgnoreCase) == true);
+                retirosSiebelMovil = todosLosDatos.Where(x => x.App?.Equals("siebelmovil", StringComparison.OrdinalIgnoreCase) == true);
+                retirosSiebelFijo = todosLosDatos.Where(x => x.App?.Equals("siebelfijo", StringComparison.OrdinalIgnoreCase) == true);
+                retirosFenix = todosLosDatos.Where(x => x.App?.Equals("fenix", StringComparison.OrdinalIgnoreCase) == true);
+                retirosOpen = todosLosDatos.Where(x => x.App?.Equals("open", StringComparison.OrdinalIgnoreCase) == true);
+                retirosDwhMovil = todosLosDatos.Where(x => x.App?.Equals("dwhmovil", StringComparison.OrdinalIgnoreCase) == true);
+                retirosDwhFijo = todosLosDatos.Where(x => x.App?.Equals("dwhfijo", StringComparison.OrdinalIgnoreCase) == true);
+                retirosSapErp = todosLosDatos.Where(x => x.App?.Equals("saperp", StringComparison.OrdinalIgnoreCase) == true);
+                retirosSapGrc = todosLosDatos.Where(x => x.App?.Equals("sapgrc", StringComparison.OrdinalIgnoreCase) == true);
+                retirosIam = todosLosDatos.Where(x => x.App?.Equals("iam", StringComparison.OrdinalIgnoreCase) == true);
+
+                totalRegistros = todosLosDatos.Count();
+                hayDatos = true;
+                ultimaCarga = DateTime.Now;
+
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Success,
+                    Summary = "Datos Cargados",
+                    Detail = $"Se cargaron {totalRegistros} registros.",
+                    Duration = 4000
+                });
+            }
+            else
+            {
+                hayDatos = false;
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Info,
+                    Summary = "Sin Datos",
+                    Detail = "No hay datos para mostrar.",
+                    Duration = 3000
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Summary = "Error",
+                Detail = $"Error al cargar datos: {ex.Message}",
+                Duration = 8000
+            });
+        }
+        finally
+        {
+            isLoadingData = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task GuardarOCManual(string app)
+    {
+        if (string.IsNullOrWhiteSpace(app)) return;
+
+        var fechaSeleccionada = selectedFechaCargue.GetValueOrDefault(app, "");
+        var numeroOC = numeroOCManual.GetValueOrDefault(app, "");
+        var estadoOC = estadoOCManual.GetValueOrDefault(app, "");
+
+        if (string.IsNullOrEmpty(fechaSeleccionada))
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Warning,
+                Summary = "Fecha Requerida",
+                Detail = "Debe seleccionar una fecha de cargue.",
+                Duration = 3000
+            });
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(numeroOC))
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Warning,
+                Summary = "Número de OC Requerido",
+                Detail = "Debe ingresar el número de la orden de cambio.",
+                Duration = 3000
+            });
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(estadoOC))
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Warning,
+                Summary = "Estado de OC Requerido",
+                Detail = "Debe seleccionar el estado de la orden de cambio.",
+                Duration = 3000
+            });
+            return;
+        }
+
+        processingByApp[app] = true;
+        StateHasChanged();
+
+        try
+        {
+            var fechaOC = DateTime.Now.ToString("yyyy-MM-dd");
+
+             var resultado = await RetirosAppService.GuardarOCManual(app, fechaSeleccionada, numeroOC, estadoOC, fechaOC);
+
+            if (resultado)
+            {
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Success,
+                    Summary = "OC Guardada",
+                    Detail = $"La OC {numeroOC} se guardó correctamente para {GetAppDisplayName(app)} con fecha {DateTime.Now:dd/MM/yyyy}.",
+                    Duration = 5000
+                });
+
+                // Limpiar campos después de guardar
+                numeroOCManual[app] = "";
+                estadoOCManual[app] = "";
+
+                await RefreshAppData(app);
+            }
+            else
+            {
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Warning,
+                    Summary = "Sin Cambios",
+                    Detail = "No se pudo guardar la orden de cambio.",
+                    Duration = 4000
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Summary = "Error",
+                Detail = $"Error al guardar OC: {ex.Message}",
+                Duration = 8000
+            });
+        }
+        finally
+        {
+            processingByApp[app] = false;
+            StateHasChanged();
+        }
+    }
+
+    private string GetAppDisplayName(string app)
+    {
+        return app.ToLower() switch
+        {
+            "portal" => "CRM Portal",
+            "da" => "Directorio Activo",
+            "siebelmovil" => "Siebel Móvil",
+            "siebelfijo" => "Siebel Fijo",
+            "fenix" => "Fenix",
+            "open" => "Open Une",
+            "dwhmovil" => "DWH Móvil",
+            "dwhfijo" => "DWH Fijo",
+            "saperp" => "SAP ERP",
+            "sapgrc" => "SAP GRC",
+            "iam" => "IAM",
+            _ => app
+        };
+    }
+
+    private async Task RefreshAppData(string app)
+    {
+        try
+        {
+            var todosLosDatos = await RetirosAppService.ObtenerDatosTemporales();
+
+            if (todosLosDatos != null && todosLosDatos.Any())
+            {
+                switch (app.ToLower())
+                {
+                    case "portal":
+                        retirosPortal = todosLosDatos.Where(x => x.App?.Equals("portal", StringComparison.OrdinalIgnoreCase) == true);
+                        break;
+                    case "da":
+                        retirosDA = todosLosDatos.Where(x => x.App?.Equals("da", StringComparison.OrdinalIgnoreCase) == true);
+                        break;
+                    case "siebelmovil":
+                        retirosSiebelMovil = todosLosDatos.Where(x => x.App?.Equals("siebelmovil", StringComparison.OrdinalIgnoreCase) == true);
+                        break;
+                    case "siebelfijo":
+                        retirosSiebelFijo = todosLosDatos.Where(x => x.App?.Equals("siebelfijo", StringComparison.OrdinalIgnoreCase) == true);
+                        break;
+                    case "fenix":
+                        retirosFenix = todosLosDatos.Where(x => x.App?.Equals("fenix", StringComparison.OrdinalIgnoreCase) == true);
+                        break;
+                    case "open":
+                        retirosOpen = todosLosDatos.Where(x => x.App?.Equals("open", StringComparison.OrdinalIgnoreCase) == true);
+                        break;
+                    case "dwhmovil":
+                        retirosDwhMovil = todosLosDatos.Where(x => x.App?.Equals("dwhmovil", StringComparison.OrdinalIgnoreCase) == true);
+                        break;
+                    case "dwhfijo":
+                        retirosDwhFijo = todosLosDatos.Where(x => x.App?.Equals("dwhfijo", StringComparison.OrdinalIgnoreCase) == true);
+                        break;
+                    case "saperp":
+                        retirosSapErp = todosLosDatos.Where(x => x.App?.Equals("saperp", StringComparison.OrdinalIgnoreCase) == true);
+                        break;
+                    case "sapgrc":
+                        retirosSapGrc = todosLosDatos.Where(x => x.App?.Equals("sapgrc", StringComparison.OrdinalIgnoreCase) == true);
+                        break;
+                    case "iam":
+                        retirosIam = todosLosDatos.Where(x => x.App?.Equals("iam", StringComparison.OrdinalIgnoreCase) == true);
+                        break;
+                }
+
+                totalRegistros = todosLosDatos.Count();
+                hayDatos = totalRegistros > 0;
+            }
+            else
+            {
+                LimpiarDatos();
+                hayDatos = false;
+                totalRegistros = 0;
+            }
+
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Summary = "Error al Refrescar",
+                Detail = $"Error al actualizar datos: {ex.Message}",
+                Duration = 5000
+            });
+        }
+    }
+
+    private void LimpiarDatos()
+    {
+        retirosPortal = Enumerable.Empty<RetirosUserApp>();
+        retirosDA = Enumerable.Empty<RetirosUserApp>();
+        retirosSiebelMovil = Enumerable.Empty<RetirosUserApp>();
+        retirosSiebelFijo = Enumerable.Empty<RetirosUserApp>();
+        retirosFenix = Enumerable.Empty<RetirosUserApp>();
+        retirosOpen = Enumerable.Empty<RetirosUserApp>();
+        retirosDwhMovil = Enumerable.Empty<RetirosUserApp>();
+        retirosDwhFijo = Enumerable.Empty<RetirosUserApp>();
+        retirosSapErp = Enumerable.Empty<RetirosUserApp>();
+        retirosSapGrc = Enumerable.Empty<RetirosUserApp>();
+        retirosIam = Enumerable.Empty<RetirosUserApp>();
+    }
+}

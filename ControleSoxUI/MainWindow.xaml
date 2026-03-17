@@ -1,0 +1,188 @@
+﻿<Window x:Class="ControleSoxUI.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        mc:Ignorable="d"
+        Title="Control Retiros"
+        Height="780"
+        Width="1300"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource MaterialDesignPaper}"
+        FontFamily="Segoe UI Variable Display"
+        materialDesign:ColorZoneAssist.Mode="PrimaryDark">
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="260"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- =========== MENÚ LATERAL =========== -->
+        <ScrollViewer VerticalScrollBarVisibility="Auto"
+                      Background="#FF1E1E2F"
+                      Padding="10">
+            <StackPanel>
+                <!-- TÍTULO -->
+                <TextBlock Text="⚙️ Control Retiros"
+                           Foreground="White"
+                           FontSize="22"
+                           FontWeight="Bold"
+                           Margin="10,20,10,30"
+                           HorizontalAlignment="Center"/>
+
+                <!-- 1. CARGUE DE INSUMOS RETIROS -->
+                <Expander Header="📁 Cargue de Insumos Retiros"
+                          Foreground="White"
+                          FontWeight="SemiBold"
+                          FontSize="15"
+                          Background="#FF2C2C3E"
+                          Margin="5"
+                          ExpandDirection="Down">
+                    <StackPanel Margin="10">
+                        <Button Content="📂 Cargue Directorio Activo"
+                                ToolTip="Se cargará un Excel con un directorio activo para realizar cruces y carga de login o estado de los usuarios."
+                                Style="{DynamicResource MaterialDesignFlatButton}"
+                                Command="{Binding NavigateCommand}"
+                                CommandParameter="CargueDA"
+                                Margin="0,4"/>
+                        <Button Content="📂 Cargue Retiros Vinculados"
+                                ToolTip="Se cargará un Excel con los retiros de Workday."
+                                Style="{DynamicResource MaterialDesignFlatButton}"
+                                Command="{Binding NavigateCommand}"
+                                CommandParameter="CargueVinculados"
+                                Margin="0,4"/>
+                        <Button Content="📂 Cargue Retiros Terceros"
+                                ToolTip="Se cargará un Excel con los retiros de Terceros (desde IAM)."
+                                Style="{DynamicResource MaterialDesignFlatButton}"
+                                Command="{Binding NavigateCommand}"
+                                CommandParameter="CargueTerceros"
+                                Margin="0,4"/>
+                    </StackPanel>
+                </Expander>
+
+                <!-- 2. UAM3 -->
+                <Expander Header="🧩 UAM3"
+                          Foreground="White"
+                          FontWeight="SemiBold"
+                          FontSize="15"
+                          Background="#FF2C2C3E"
+                          Margin="5">
+                    <StackPanel Margin="10">
+                        <Button Content="📂 Cargue de Insumos UAM3"
+                                Command="{Binding NavigateCommand}"
+                                CommandParameter="CargueUam3"
+                                Style="{DynamicResource MaterialDesignFlatButton}"
+                                Margin="0,4"/>
+                        <Button Content="🙍‍♂️ Usuarios a Deshabilitar"
+                                Command="{Binding NavigateCommand}"
+                                CommandParameter="UserDisableUam3"
+                                Style="{DynamicResource MaterialDesignFlatButton}"
+                                Margin="0,4"/>
+                        <Button Content="🖥️ Service Desk"
+                                Command="{Binding NavigateCommand}"
+                                CommandParameter="ServiceDeskUam3"
+                                Style="{DynamicResource MaterialDesignFlatButton}"
+                                Margin="0,4"/>
+                        <Button Content="📊 Reportes"
+                                Command="{Binding NavigateCommand}"
+                                CommandParameter="ReportesUam3"
+                                Style="{DynamicResource MaterialDesignFlatButton}"
+                                Margin="0,4"/>
+                    </StackPanel>
+                </Expander>
+
+                <!-- 3. RETIROS USER NO SOX -->
+                <Expander Header="🚫 Retiros User No SOX"
+                          Foreground="White"
+                          FontWeight="SemiBold"
+                          FontSize="15"
+                          Background="#FF2C2C3E"
+                          Margin="5">
+                    <StackPanel Margin="10">
+                        <Button Content="📂 Cargue de Insumos No SOX"
+                                Command="{Binding NavigateCommand}"
+                                CommandParameter="CargueNoSox"
+                                Style="{DynamicResource MaterialDesignFlatButton}"
+                                Margin="0,4"/>
+                        <Button Content="🙍‍♂️ Usuarios a Deshabilitar"
+                                Command="{Binding NavigateCommand}"
+                                CommandParameter="UserDisableNoSox"
+                                Style="{DynamicResource MaterialDesignFlatButton}"
+                                Margin="0,4"/>
+
+                        <!-- SUBMENÚ SERVICE DESK -->
+                        <Expander Header="🖥️ Service Desk"
+                                  Foreground="White"
+                                  Background="#FF3C3C4F"
+                                  Margin="0,6,0,0"
+                                  ExpandDirection="Down">
+                            <StackPanel Margin="8,5,8,8">
+                                <Button Content="🧾 Realizar OC Retiros"
+                                        Command="{Binding NavigateCommand}"
+                                        CommandParameter="OcRetiros"
+                                        Style="{DynamicResource MaterialDesignFlatButton}"
+                                        Margin="0,4"/>
+                                <Button Content="📄 Consultar Estado OC"
+                                        Command="{Binding NavigateCommand}"
+                                        CommandParameter="EstadoOcRetiros"
+                                        Style="{DynamicResource MaterialDesignFlatButton}"
+                                        Margin="0,4"/>
+                            </StackPanel>
+                        </Expander>
+
+                        <Button Content="📊 Reportes"
+                                Command="{Binding NavigateCommand}"
+                                CommandParameter="ReportesNoSox"
+                                Style="{DynamicResource MaterialDesignFlatButton}"
+                                Margin="0,8"/>
+                    </StackPanel>
+                </Expander>
+
+                <!-- 4. SQL LIBRE -->
+                <Button Content="💾 Ejecutar SQL Libre"
+                        Command="{Binding NavigateCommand}"
+                        CommandParameter="SqlLibre"
+                        Style="{DynamicResource MaterialDesignOutlinedButton}"
+                        Foreground="White"
+                        Margin="10,25,10,0"
+                        Padding="10"/>
+
+                <!-- 5. GUÍA -->
+                <Button Content="📘 Guía de Uso"
+                        Command="{Binding NavigateCommand}"
+                        CommandParameter="Guia"
+                        Style="{DynamicResource MaterialDesignOutlinedButton}"
+                        Foreground="White"
+                        Margin="10,8,10,0"
+                        Padding="10"/>
+
+                <!-- 6. SALIR -->
+                <Button Content="🚪 Salir"
+                        Command="{Binding ExitCommand}"
+                        Style="{DynamicResource MaterialDesignOutlinedButton}"
+                        Foreground="White"
+                        Margin="10,20,10,10"
+                        Padding="10"/>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- =========== CONTENEDOR CENTRAL =========== -->
+        <Border Grid.Column="1"
+        Margin="15"
+        Background="{DynamicResource MaterialDesignPaper}"
+        CornerRadius="10">
+            <Border.Effect>
+                <DropShadowEffect
+            Color="#33000000"
+            BlurRadius="12"
+            ShadowDepth="4"
+            Opacity="0.6" />
+            </Border.Effect>
+
+            <ContentControl Content="{Binding CurrentView}" />
+        </Border>
+
+    </Grid>
+</Window>

@@ -1,0 +1,852 @@
+﻿using BaseDatoSqLite.Conexion;
+using Dapper;
+using Data.Interfaces.CapaApp.IServicesCrucesExcel;
+using Helper;
+using Microsoft.Extensions.Configuration;
+using Shared.CapaAplicacion.UserDisable;
+
+namespace Data.Repository.CapaAPP.ServicesCrucesExcel;
+
+public class CrucesUserDisable : ICrucesExcel
+{
+    private readonly ConnectionFactory _factory;
+    private readonly ILogger _logger;
+    private readonly IConfiguration _config;
+
+    public CrucesUserDisable(ConnectionFactory factory, ILogger logger, IConfiguration config)
+    {
+        _factory = factory;
+        _logger = logger;
+        _config = config;
+    }
+
+    #region Métodos Públicos para Obtener Usuarios
+
+    public async Task<IEnumerable<UsuarioDisableDto>> UsuariosPortalDisable()
+    {
+        try
+        {
+            using var conexion = _factory.CreateConnection();
+
+            var sql = $@"
+                        WITH datos AS (
+                            {GetQueryPortal()}
+                        )
+                        SELECT *
+                        FROM datos d
+                        WHERE NOT EXISTS (
+                            SELECT 1 FROM retiro_app_temp t
+                            WHERE t.app = 'siebelmovil' COLLATE NOCASE
+                              AND t.cedula_consolidado = d.CedulaConsolidado
+                              AND COALESCE(t.login_app, '') = COALESCE(d.LoginApp, '')
+                              AND COALESCE(t.tipo_cruce, '') = COALESCE(d.TipoCruce, '')
+                              AND DATE(t.fecha_ejecucion) = DATE('now')
+                        )
+                        ORDER BY d.FechaRetiro DESC;";
+
+            var lista = (await conexion.QueryAsync<UsuarioDisableDto>(sql)).ToList();
+
+            var listaUnica = lista
+                .GroupBy(x => new { x.CedulaConsolidado, x.LoginApp, x.TipoCruce })
+                .Select(g => g.OrderByDescending(x => x.FechaRetiro).First())
+                .ToList();
+
+            return listaUnica;
+        }
+        catch (Exception ex)
+        {
+            //_logger.LogError($"Error en UsuariosPortalDisable: {ex.Message}");
+            throw;
+        }
+    }
+
+    public async Task<IEnumerable<UsuarioDisableDto>> UsuariosDADisable()
+    {
+        try
+        {
+            using var conexion = _factory.CreateConnection();
+
+            var sql = $@"
+                        WITH datos AS (
+                            {GetQueryDA()}
+                        )
+                        SELECT *
+                        FROM datos d
+                        WHERE NOT EXISTS (
+                            SELECT 1 FROM retiro_app_temp t
+                            WHERE t.app = 'siebelmovil' COLLATE NOCASE
+                              AND t.cedula_consolidado = d.CedulaConsolidado
+                              AND COALESCE(t.login_app, '') = COALESCE(d.LoginApp, '')
+                              AND COALESCE(t.tipo_cruce, '') = COALESCE(d.TipoCruce, '')
+                              AND DATE(t.fecha_ejecucion) = DATE('now')
+                        )
+                        ORDER BY d.FechaRetiro DESC;";
+
+            var lista = (await conexion.QueryAsync<UsuarioDisableDto>(sql)).ToList();
+
+            var listaUnica = lista
+                .GroupBy(x => new { x.CedulaConsolidado, x.CedulaApp, x.TipoCruce })
+                .Select(g => g.OrderByDescending(x => x.FechaRetiro).First())
+                .ToList();
+
+            return listaUnica;
+        }
+        catch (Exception ex)
+        {
+            //_logger.LogError($"Error en UsuariosDADisable: {ex.Message}");
+            throw;
+        }
+    }
+
+    public async Task<IEnumerable<UsuarioDisableDto>> UsuariosSiebelMovilDisable()
+    {
+        try
+        {
+            using var conexion = _factory.CreateConnection();
+
+            var sql = $@"
+                        WITH datos AS (
+                            {GetQuerySiebelMovil()}
+                        )
+                        SELECT *
+                        FROM datos d
+                        WHERE NOT EXISTS (
+                            SELECT 1 FROM retiro_app_temp t
+                            WHERE t.app = 'siebelmovil' COLLATE NOCASE
+                              AND t.cedula_consolidado = d.CedulaConsolidado
+                              AND COALESCE(t.login_app, '') = COALESCE(d.LoginApp, '')
+                              AND COALESCE(t.tipo_cruce, '') = COALESCE(d.TipoCruce, '')
+                              AND DATE(t.fecha_ejecucion) = DATE('now')
+                        )
+                        ORDER BY d.FechaRetiro DESC;";
+
+            var lista = (await conexion.QueryAsync<UsuarioDisableDto>(sql)).ToList();
+
+            var listaUnica = lista
+                .GroupBy(x => new { x.CedulaConsolidado, x.LoginApp, x.TipoCruce })
+                .Select(g => g.OrderByDescending(x => x.FechaRetiro).First())
+                .ToList();
+
+            return listaUnica;
+        }
+        catch (Exception)
+        {
+            throw;
+        }
+    }
+
+
+    public async Task<IEnumerable<UsuarioDisableDto>> UsuariosSiebelFijoDisable()
+    {
+        try
+        {
+            using var conexion = _factory.CreateConnection();
+
+            var sql = $@"
+                WITH datos AS (
+                    {GetQuerySiebelFijo()}
+                )
+                SELECT *
+                FROM (
+                   SELECT d.*,
+                          ROW_NUMBER() OVER (PARTITION BY LoginConsolidado, LoginApp ORDER BY FechaRetiro DESC) AS rn
+                   FROM datos d
+                   WHERE NOT EXISTS (
+                       SELECT 1 FROM retiro_app_temp t
+                       WHERE t.app = 'siebelfijo' COLLATE NOCASE
+                       AND t.cedula_consolidado = d.CedulaConsolidado
+                       AND t.login_consolidado = d.LoginConsolidado
+                       AND DATE(t.fecha_ejecucion) = DATE('now')
+                   )
+                ) x
+                WHERE rn = 1";
+
+            return (await conexion.QueryAsync<UsuarioDisableDto>(sql)).ToList();
+        }
+        catch (Exception ex)
+        {
+            //_logger.LogError($"Error en UsuariosSiebelFijoDisable: {ex.Message}");
+            throw;
+        }
+    }
+
+    public async Task<IEnumerable<UsuarioDisableDto>> UsuariosFenixDisable()
+    {
+        try
+        {
+            using var conexion = _factory.CreateConnection();
+
+            var sql = $@"
+                WITH datos AS (
+                    {GetQueryFenix()}
+                )
+                SELECT *
+                FROM (
+                   SELECT d.*,
+                          ROW_NUMBER() OVER (PARTITION BY LoginConsolidado, LoginApp ORDER BY FechaRetiro DESC) AS rn
+                   FROM datos d
+                   WHERE NOT EXISTS (
+                       SELECT 1 FROM retiro_app_temp t
+                       WHERE t.app = 'fenix' COLLATE NOCASE
+                       AND t.cedula_consolidado = d.CedulaConsolidado
+                       AND t.login_consolidado = d.LoginConsolidado
+                       AND DATE(t.fecha_ejecucion) = DATE('now')
+                   )
+                ) x
+                WHERE rn = 1";
+
+            return (await conexion.QueryAsync<UsuarioDisableDto>(sql)).ToList();
+        }
+        catch (Exception ex)
+        {
+            //_logger.LogError($"Error en UsuariosFenixDisable: {ex.Message}");
+            throw;
+        }
+    }
+
+    public async Task<IEnumerable<UsuarioDisableDto>> UsuariosOpenDisable()
+    {
+        try
+        {
+            using var conexion = _factory.CreateConnection();
+
+            var sql = $@"
+                WITH datos AS (
+                    {GetQueryOpen()}
+                )
+                SELECT *
+                FROM (
+                   SELECT d.*,
+                          ROW_NUMBER() OVER (PARTITION BY LoginConsolidado, LoginApp ORDER BY FechaRetiro DESC) AS rn
+                   FROM datos d
+                   WHERE NOT EXISTS (
+                       SELECT 1 FROM retiro_app_temp t
+                       WHERE t.app = 'open' COLLATE NOCASE
+                       AND t.cedula_consolidado = d.CedulaConsolidado
+                       AND t.login_consolidado = d.LoginConsolidado
+                       AND DATE(t.fecha_ejecucion) = DATE('now')
+                   )
+                ) x
+                WHERE rn = 1";
+
+            return (await conexion.QueryAsync<UsuarioDisableDto>(sql)).ToList();
+        }
+        catch (Exception ex)
+        {
+            //_logger.LogError($"Error en UsuariosOpenDisable: {ex.Message}");
+            throw;
+        }
+    }
+
+    public async Task<IEnumerable<UsuarioDisableDto>> UsuariosDwhMovilDisable()
+    {
+        try
+        {
+            using var conexion = _factory.CreateConnection();
+
+            var sql = $@"
+                WITH datos AS (
+                    {GetQueryDwhMovil()}
+                )
+                SELECT *
+                FROM (
+                   SELECT d.*,
+                          ROW_NUMBER() OVER (PARTITION BY LoginConsolidado, LoginApp ORDER BY FechaRetiro DESC) AS rn
+                   FROM datos d
+                   WHERE NOT EXISTS (
+                       SELECT 1 FROM retiro_app_temp t
+                       WHERE t.app = 'dwhmovil' COLLATE NOCASE
+                       AND t.cedula_consolidado = d.CedulaConsolidado
+                       AND t.login_consolidado = d.LoginConsolidado
+                       AND DATE(t.fecha_ejecucion) = DATE('now')
+                   )
+                ) x
+                WHERE rn = 1";
+
+            return (await conexion.QueryAsync<UsuarioDisableDto>(sql)).ToList();
+        }
+        catch (Exception ex)
+        {
+            //_logger.LogError($"Error en UsuariosDwhMovilDisable: {ex.Message}");
+            throw;
+        }
+    }
+
+    public async Task<IEnumerable<UsuarioDisableDto>> UsuariosDwhFijoDisable()
+    {
+        try
+        {
+            using var conexion = _factory.CreateConnection();
+
+            var sql = $@"
+                WITH datos AS (
+                    {GetQueryDwhFijo()}
+                )
+                SELECT *
+                FROM (
+                   SELECT d.*,
+                          ROW_NUMBER() OVER (PARTITION BY LoginConsolidado, LoginApp ORDER BY FechaRetiro DESC) AS rn
+                   FROM datos d
+                   WHERE NOT EXISTS (
+                       SELECT 1 FROM retiro_app_temp t
+                       WHERE t.app = 'dwhfijo' COLLATE NOCASE
+                       AND t.cedula_consolidado = d.CedulaConsolidado
+                       AND t.login_consolidado = d.LoginConsolidado
+                       AND DATE(t.fecha_ejecucion) = DATE('now')
+                   )
+                ) x
+                WHERE rn = 1";
+
+            return (await conexion.QueryAsync<UsuarioDisableDto>(sql)).ToList();
+        }
+        catch (Exception ex)
+        {
+            //_logger.LogError($"Error en UsuariosDwhFijoDisable: {ex.Message}");
+            throw;
+        }
+    }
+
+    public async Task<IEnumerable<UsuarioDisableDto>> UsuariosSapErpDisable()
+    {
+        try
+        {
+            using var conexion = _factory.CreateConnection();
+
+            var sql = $@"
+                WITH datos AS (
+                    {GetQuerySapErp()}
+                )
+                SELECT *
+                FROM (
+                   SELECT d.*,
+                          ROW_NUMBER() OVER (PARTITION BY LoginConsolidado, LoginApp ORDER BY FechaRetiro DESC) AS rn
+                   FROM datos d
+                   WHERE NOT EXISTS (
+                       SELECT 1 FROM retiro_app_temp t
+                       WHERE t.app = 'saperp' COLLATE NOCASE
+                       AND t.cedula_consolidado = d.CedulaConsolidado
+                       AND t.login_consolidado = d.LoginConsolidado
+                       AND DATE(t.fecha_ejecucion) = DATE('now')
+                   )
+                ) x
+                WHERE rn = 1";
+
+            return (await conexion.QueryAsync<UsuarioDisableDto>(sql)).ToList();
+        }
+        catch (Exception ex)
+        {
+            //_logger.LogError($"Error en UsuariosSapErpDisable: {ex.Message}");
+            throw;
+        }
+    }
+
+    public async Task<IEnumerable<UsuarioDisableDto>> UsuariosSapGrcDisable()
+    {
+        try
+        {
+            using var conexion = _factory.CreateConnection();
+
+            var sql = $@"
+                WITH datos AS (
+                    {GetQuerySapGrc()}
+                )
+                SELECT *
+                FROM (
+                   SELECT d.*,
+                          ROW_NUMBER() OVER (PARTITION BY LoginConsolidado, LoginApp ORDER BY FechaRetiro DESC) AS rn
+                   FROM datos d
+                   WHERE NOT EXISTS (
+                       SELECT 1 FROM retiro_app_temp t
+                       WHERE t.app = 'sapgrc' COLLATE NOCASE
+                       AND t.cedula_consolidado = d.CedulaConsolidado
+                       AND t.login_consolidado = d.LoginConsolidado
+                       AND DATE(t.fecha_ejecucion) = DATE('now')
+                   )
+                ) x
+                WHERE rn = 1";
+
+            return (await conexion.QueryAsync<UsuarioDisableDto>(sql)).ToList();
+        }
+        catch (Exception ex)
+        {
+            //_logger.LogError($"Error en UsuariosSapGrcDisable: {ex.Message}");
+            throw;
+        }
+    }
+
+    public async Task<IEnumerable<UsuarioDisableDto>> UsuariosIamDisable()
+    {
+        try
+        {
+            using var conexion = _factory.CreateConnection();
+
+            var sql = $@"
+                WITH datos AS (
+                    {GetQueryIam()}
+                )
+                SELECT *
+                FROM (
+                   SELECT d.*,
+                          ROW_NUMBER() OVER (PARTITION BY LoginConsolidado, LoginApp ORDER BY FechaRetiro DESC) AS rn
+                   FROM datos d
+                   WHERE NOT EXISTS (
+                       SELECT 1 FROM retiro_app_temp t
+                       WHERE t.app = 'iam' COLLATE NOCASE
+                       AND t.cedula_consolidado = d.CedulaConsolidado
+                       AND t.login_consolidado = d.LoginConsolidado
+                       AND DATE(t.fecha_ejecucion) = DATE('now')
+                   )
+                ) x
+                WHERE rn = 1";
+
+            return (await conexion.QueryAsync<UsuarioDisableDto>(sql)).ToList();
+        }
+        catch (Exception ex)
+        {
+            //_logger.LogError($"Error en UsuariosIamDisable: {ex.Message}");
+            throw;
+        }
+    }
+
+    #endregion
+
+    #region Queries Públicas (Usadas por CrucesDisplayService)
+
+    public string GetQueryPortal() => @"
+                                        SELECT DISTINCT
+                                            'portal' as App,
+                                            'LOGIN' as TipoCruce,
+                                            p.cedula AS CedulaApp, 
+                                            c.cedula AS CedulaConsolidado,
+                                            p.Login AS LoginApp,
+                                            c.cedula AS LoginConsolidado,
+                                            c.nombre AS NombreConsolidado,
+                                            'Habilitado' AS EstadoApp,
+                                            c.estado_entidad AS EstadoConsolidado,
+                                            c.fecha_retiro AS FechaRetiro
+                                        FROM consolidado c
+                                        INNER JOIN crm_portal p ON c.cedula = p.Login
+                                        WHERE c.estado_entidad COLLATE NOCASE <> 'Habilitado'
+                                        
+                                        UNION ALL
+                                        
+                                           SELECT DISTINCT
+                                            'portal' as App,
+                                            'CEDULA' as TipoCruce,
+                                            p.cedula AS CedulaApp, 
+                                            c.cedula AS CedulaConsolidado,
+                                            p.Login AS LoginApp,
+                                            c.cedula AS LoginConsolidado,
+                                            c.nombre AS NombreConsolidado,
+                                            'Habilitado' AS EstadoApp,
+                                            c.estado_entidad AS EstadoConsolidado,
+                                            c.fecha_retiro AS FechaRetiro
+                                        FROM consolidado c
+                                        INNER JOIN crm_portal p ON c.cedula = p.Cedula
+                                        WHERE c.estado_entidad COLLATE NOCASE <> 'Habilitado'
+                                        ";
+
+    public string GetQueryDA() => @"
+                                    SELECT 
+                                        'da' as App,
+                                        'LOGIN' as TipoCruce,
+                                        da.Identificacion AS CedulaApp, 
+                                        c.cedula AS CedulaConsolidado,
+                                        da.Login AS LoginApp,
+                                        c.Login AS LoginConsolidado,
+                                        c.nombre AS NombreConsolidado,
+                                        da.Estado AS EstadoApp,
+                                        c.estado_entidad AS EstadoConsolidado,
+                                        c.fecha_retiro AS FechaRetiro
+                                    FROM consolidado c
+                                    INNER JOIN directorio_activo da ON c.login = da.login
+                                    WHERE da.estado = 'ACTIVO' COLLATE NOCASE
+                                        AND c.estado_entidad <> 'Habilitado' COLLATE NOCASE
+
+                                    UNION ALL
+
+                                    SELECT 
+                                        'da' as App,
+                                        'CEDULA' as TipoCruce,
+                                        da.Identificacion AS CedulaApp, 
+                                        c.cedula AS CedulaConsolidado,
+                                        da.Login AS LoginApp,
+                                        c.Login AS LoginConsolidado,
+                                        c.nombre AS NombreConsolidado,
+                                        da.Estado AS EstadoApp,
+                                        c.estado_entidad AS EstadoConsolidado,
+                                        c.fecha_retiro AS FechaRetiro
+                                    FROM consolidado c
+                                    INNER JOIN directorio_activo da ON c.cedula = da.Identificacion 
+                                    WHERE da.estado = 'ACTIVO' COLLATE NOCASE
+                                        AND c.estado_entidad <> 'Habilitado' COLLATE NOCASE
+                                        AND (da.login <> c.login OR da.login IS NULL OR c.login IS NULL)";
+
+    public string GetQuerySiebelMovil() => @"
+                                            SELECT 
+                                                *
+                                            FROM (
+                                                SELECT DISTINCT
+                                                    CASE 
+                                                        WHEN s.responsabilidad IN 
+                                                        ('UNE Siebel Mobile General','UNE Siebel Mobile Supervisor',
+                                                        'UNE Siebel Mobile Manager') COLLATE NOCASE THEN 'siebelMovil'
+                                                        ELSE 'siebelFijo'
+                                                    END AS App,
+                                                    'LOGIN' as TipoCruce,
+                                                    c.cedula AS CedulaApp, 
+                                                    c.cedula AS CedulaConsolidado,
+                                                    s.Login AS LoginApp,
+                                                    c.Login AS LoginConsolidado,
+                                                    c.nombre AS NombreConsolidado,
+                                                    s.responsabilidad AS EstadoApp,
+                                                    c.estado_entidad AS EstadoConsolidado,
+                                                    c.fecha_retiro AS FechaRetiro
+                                                FROM consolidado c
+                                                INNER JOIN siebel s ON s.login = c.login COLLATE NOCASE
+                                                WHERE s.responsabilidad <> 'Z_UNE_DESHABILITADO' 
+                                                    AND c.estado_entidad <> 'Habilitado' COLLATE NOCASE
+                                            ) sub
+                                            WHERE sub.App = 'siebelMovil'
+
+                                            UNION ALL
+
+                                            SELECT 
+                                                *
+                                            FROM (
+                                                SELECT DISTINCT
+                                                    CASE 
+                                                        WHEN s.responsabilidad IN 
+                                                        ('UNE Siebel Mobile General','UNE Siebel Mobile Supervisor',
+                                                        'UNE Siebel Mobile Manager') COLLATE NOCASE THEN 'siebelMovil'
+                                                        ELSE 'siebelFijo'
+                                                    END AS App,
+                                                    'CEDULA' as TipoCruce,
+                                                    c.cedula AS CedulaApp, 
+                                                    c.cedula AS CedulaConsolidado,
+                                                    s.Login AS LoginApp,
+                                                    c.Login AS LoginConsolidado,
+                                                    c.nombre AS NombreConsolidado,
+                                                    s.responsabilidad AS EstadoApp,
+                                                    c.estado_entidad AS EstadoConsolidado,
+                                                    c.fecha_retiro AS FechaRetiro
+                                                FROM consolidado c
+                                                INNER JOIN siebel s ON s.login = c.cedula COLLATE NOCASE
+                                                WHERE s.responsabilidad <> 'Z_UNE_DESHABILITADO' 
+                                                    AND c.estado_entidad <> 'Habilitado' COLLATE NOCASE
+                                                    AND (s.login <> c.login OR s.login IS NULL OR c.login IS NULL)
+                                            ) sub
+                                            WHERE sub.App = 'siebelMovil'";
+
+    public string GetQuerySiebelFijo() => @"
+                                            WITH ClasificacionLogin AS (
+                                                SELECT
+                                                    s.Login,
+                                                    SUM(CASE 
+                                                        WHEN s.responsabilidad NOT IN (
+                                                            'UNE Siebel Mobile General', 
+                                                            'UNE Siebel Mobile Supervisor', 
+                                                            'UNE Siebel Mobile Manager'
+                                                        ) COLLATE NOCASE THEN 1 
+                                                        ELSE 0 
+                                                    END) AS ResponsabilidadesNoMobile
+                                                FROM siebel s
+                                                WHERE s.responsabilidad <> 'Z_UNE_DESHABILITADO' 
+                                                GROUP BY s.Login
+                                            )
+                                            SELECT 
+                                                'siebelFijo' AS App,
+                                                'LOGIN' AS TipoCruce,
+                                                c.cedula AS CedulaApp, 
+                                                c.cedula AS CedulaConsolidado,
+                                                c.Login AS LoginConsolidado,
+                                                cl.Login AS LoginApp,
+                                                c.nombre AS NombreConsolidado,
+                                                MIN(s.responsabilidad) AS EstadoApp, 
+                                                c.estado_entidad AS EstadoConsolidado,
+                                                c.fecha_retiro AS FechaRetiro
+                                            FROM consolidado c
+                                            INNER JOIN siebel s ON s.login = c.login COLLATE NOCASE
+                                            INNER JOIN ClasificacionLogin cl ON s.login = cl.Login
+                                            WHERE c.estado_entidad <> 'Habilitado' COLLATE NOCASE
+                                                AND cl.ResponsabilidadesNoMobile > 0
+                                            GROUP BY c.cedula, c.login, c.nombre, c.estado_entidad, c.fecha_retiro, cl.Login";
+
+    // IMPORTANTE: Debes completar estos métodos con las queries de tus otros métodos existentes
+    // Copia las queries SQL desde tus métodos UsuariosFenixDisable(), UsuariosOpenDisable(), etc.
+
+    public string GetQueryFenix() => @"
+                                      SELECT 
+                                            'fenix' as App,
+                                            'LOGIN' as TipoCruce,
+                                            f.REGISTRO AS CedulaApp, 
+                                            c.cedula AS CedulaConsolidado,
+                                            f.USUARIO_ID AS LoginApp,
+                                            c.Login AS LoginConsolidado,
+                                            c.nombre AS NombreConsolidado,
+                                            f.ESTADO_USUARIO AS EstadoApp,
+                                            c.estado_entidad AS EstadoConsolidado,
+                                            c.fecha_retiro AS FechaRetiro
+                                        FROM consolidado c
+                                        INNER JOIN fenix f
+                                          ON f.USUARIO_ID = c.login COLLATE NOCASE
+                                        WHERE f.ESTADO_USUARIO <> 'RETIRADO' COLLATE NOCASE
+                                             and c.estado_entidad <> 'Habilitado' COLLATE NOCASE
+
+                                     UNION ALL
+
+                                        SELECT 
+                                            'fenix' as App,
+                                            'CEDULA' as TipoCruce,
+                                            f.REGISTRO AS CedulaApp, 
+                                            c.cedula AS CedulaConsolidado,
+                                            f.USUARIO_ID AS LoginApp,
+                                            c.Login AS LoginConsolidado,
+                                            c.nombre AS NombreConsolidado,
+                                            F.ESTADO_USUARIO AS EstadoApp,
+                                            c.estado_entidad AS EstadoConsolidado,
+                                            c.fecha_retiro AS FechaRetiro
+                                        FROM consolidado c
+                                        INNER JOIN fenix f
+                                          ON f.USUARIO_ID = c.cedula COLLATE NOCASE
+                                        WHERE f.ESTADO_USUARIO <> 'RETIRADO' COLLATE NOCASE
+                                             and c.estado_entidad<> 'Habilitado' COLLATE NOCASE
+                                          AND (f.REGISTRO <> c.login OR f.USUARIO_ID IS NULL OR c.login IS NULL)
+";
+
+    public string GetQueryOpen() => @"
+                                        SELECT  DISTINCT
+                                             'open_une' as App,
+                                             'LOGIN' as TipoCruce,
+                                             'No Tiene cc el Ins.' AS CedulaApp, 
+                                             c.cedula AS CedulaConsolidado,
+                                             op.LOGIN AS LoginApp,
+                                             c.Login AS LoginConsolidado,
+                                             c.nombre AS NombreConsolidado,
+                                             op.ESTADO AS EstadoApp,
+                                             c.estado_entidad AS EstadoConsolidado,
+                                             c.fecha_retiro AS FechaRetiro
+                                         FROM consolidado c
+                                         INNER JOIN open_une op
+                                           ON op.LOGIN = c.login COLLATE NOCASE
+                                         WHERE op.ESTADO in ('OPEN','EXPIRED') COLLATE NOCASE
+                                              and c.estado_entidad<> 'Habilitado' COLLATE NOCASE
+
+                                      UNION ALL
+
+                                         SELECT DISTINCT
+                                             'open_une' as App,
+                                             'CEDULA' as TipoCruce,
+                                             'No Tiene cc el Ins.' AS CedulaApp, 
+                                             c.cedula AS CedulaConsolidado,
+                                             op.LOGIN AS LoginApp,
+                                             c.Login AS LoginConsolidado,
+                                             c.nombre AS NombreConsolidado,
+                                             op.ESTADO AS EstadoApp,
+                                             c.estado_entidad AS EstadoConsolidado,
+                                             c.fecha_retiro AS FechaRetiro
+                                         FROM consolidado c
+                                         INNER JOIN open_une op
+                                           ON 'No Tiene cc el Ins.' = c.cedula COLLATE NOCASE
+                                         WHERE op.ESTADO in ('OPEN','EXPIRED') COLLATE NOCASE
+                                              and c.estado_entidad<> 'Habilitado' COLLATE NOCASE
+                                           AND (op.LOGIN  <> c.login OR op.LOGIN IS NULL OR c.login IS NULL)
+                    ";
+
+    public string GetQueryDwhMovil() => @"
+                                    SELECT 
+                                             'dwhMovil' as App,
+                                             'LOGIN' as TipoCruce,
+                                             'No Tiene cc el Ins.' AS CedulaApp, 
+                                             c.cedula AS CedulaConsolidado,
+                                             dm.Usuario AS LoginApp,
+                                             c.Login AS LoginConsolidado,
+                                             c.nombre AS NombreConsolidado,
+                                             dm.Habilitado AS EstadoApp,
+                                             c.estado_entidad AS EstadoConsolidado,
+                                             c.fecha_retiro AS FechaRetiro
+                                         FROM consolidado c
+                                          INNER JOIN dwh_movil dm
+                                            ON dm.Usuario = c.login COLLATE NOCASE
+                                          WHERE  c.estado_entidad <> 'Habilitado' COLLATE NOCASE
+
+                                     UNION ALL
+
+                                         SELECT 
+                                             'dwhMovil' as App,
+                                             'CEDULA' as TipoCruce,
+                                             'No Tiene cc el Ins.' AS CedulaApp, 
+                                             c.cedula AS CedulaConsolidado,
+                                             dm.Usuario AS LoginApp,
+                                             c.Login AS LoginConsolidado,
+                                             c.nombre AS NombreConsolidado,
+                                             dm.Habilitado AS EstadoApp,
+                                             c.estado_entidad AS EstadoConsolidado,
+                                             c.fecha_retiro AS FechaRetiro
+                                         FROM consolidado c
+                                          INNER JOIN dwh_movil dm
+                                            ON 'No Tiene cc el Ins.' = c.cedula COLLATE NOCASE
+                                          WHERE  c.estado_entidad <> 'Habilitado' COLLATE NOCASE
+                                           AND (dm.Usuario  <> c.login OR dm.Usuario IS NULL OR c.login IS NULL)";
+
+    public string GetQueryDwhFijo() => @"
+        
+                                        SELECT 
+                                                 'dwhFijo' as App,
+                                                 'LOGIN' as TipoCruce,
+                                                 'No Tiene cc el Ins.' AS CedulaApp, 
+                                                 c.cedula AS CedulaConsolidado,
+                                                 df.Usuario AS LoginApp,
+                                                 c.Login AS LoginConsolidado,
+                                                 c.nombre AS NombreConsolidado,
+                                                 df.Habilitado AS EstadoApp,
+                                                 c.estado_entidad AS EstadoConsolidado,
+                                                 c.fecha_retiro AS FechaRetiro
+                                             FROM consolidado c
+                                             INNER JOIN dwh_fijo df
+                                               ON df.Usuario = c.login COLLATE NOCASE
+                                             WHERE  c.estado_entidad <> 'Habilitado' COLLATE NOCASE
+                                                     and df.Habilitado = 'Habilitado' COLLATE NOCASE
+
+                                        UNION ALL
+
+                                             SELECT 
+                                                 'dwhFijo' as App,
+                                                 'CEDULA' as TipoCruce,
+                                                 'No Tiene cc el Ins.' AS CedulaApp, 
+                                                 c.cedula AS CedulaConsolidado,
+                                                 df.Usuario AS LoginApp,
+                                                 c.Login AS LoginConsolidado,
+                                                 c.nombre AS NombreConsolidado,
+                                                 df.Habilitado AS EstadoApp,
+                                                 c.estado_entidad AS EstadoConsolidado,
+                                                 c.fecha_retiro AS FechaRetiro
+                                             FROM consolidado c
+                                             INNER JOIN dwh_fijo df
+                                               ON 'No Tiene cc el Ins.' = c.cedula COLLATE NOCASE
+                                             WHERE  c.estado_entidad <> 'Habilitado' COLLATE NOCASE
+                                                     and df.Habilitado = 'Habilitado' COLLATE NOCASE
+                                               AND (df.Usuario  <> c.login OR df.Usuario IS NULL OR c.login IS NULL)
+";
+
+    public string GetQuerySapErp() => @"
+        
+                                        SELECT 
+                                                'sapErp' as App,
+                                                'LOGIN' as TipoCruce,
+                                                'No Tiene cc el Ins.' AS CedulaApp, 
+                                                c.cedula AS CedulaConsolidado,
+                                                se.Usuarios AS LoginApp,
+                                                c.Login AS LoginConsolidado,
+                                                c.nombre AS NombreConsolidado,
+                                                se.Tipo_usuario AS EstadoApp,
+                                                c.estado_entidad AS EstadoConsolidado,
+                                                c.fecha_retiro AS FechaRetiro
+                                            FROM consolidado c
+                                             INNER JOIN sap_erp se
+                                               ON se.Usuarios = c.login COLLATE NOCASE
+                                             WHERE se.Tipo_usuario COLLATE NOCASE <> 'L Referen.'
+                                               AND c.estado_entidad COLLATE NOCASE <> 'Habilitado'
+
+                                       UNION ALL
+
+                                            SELECT 
+                                                'sapErp' as App,
+                                                'CEDULA' as TipoCruce,
+                                                'No Tiene cc el Ins.' AS CedulaApp, 
+                                                c.cedula AS CedulaConsolidado,
+                                                se.Usuarios AS LoginApp,
+                                                c.Login AS LoginConsolidado,
+                                                c.nombre AS NombreConsolidado,
+                                                se.Tipo_usuario AS EstadoApp,
+                                                c.estado_entidad AS EstadoConsolidado,
+                                                c.fecha_retiro AS FechaRetiro
+                                            FROM consolidado c
+                                             INNER JOIN sap_erp se
+                                               ON 'No Tiene cc el Ins.' = c.cedula COLLATE NOCASE
+                                             WHERE se.Tipo_usuario COLLATE NOCASE <> 'L Referen.'
+                                               AND c.estado_entidad COLLATE NOCASE <> 'Habilitado'
+                                              AND (se.Usuarios <> c.login OR se.Usuarios IS NULL OR c.login IS NULL)
+                                            ";
+
+    public string GetQuerySapGrc() => @"
+        
+                                      SELECT 
+                                            'sapGrc' as App,
+                                            'LOGIN' as TipoCruce,
+                                            'No Tiene cc el Ins.' AS CedulaApp, 
+                                            c.cedula AS CedulaConsolidado,
+                                            sg.Usuarios AS LoginApp,
+                                            c.Login AS LoginConsolidado,
+                                            c.nombre AS NombreConsolidado,
+                                            sg.Tipo_usuario AS EstadoApp,
+                                            c.estado_entidad AS EstadoConsolidado,
+                                            c.fecha_retiro AS FechaRetiro
+                                        FROM consolidado c
+                                         INNER JOIN sap_grc sg
+                                           ON sg.Usuarios = c.login COLLATE NOCASE
+                                         WHERE sg.Tipo_usuario <> 'L Referen.' COLLATE NOCASE
+                                              and c.estado_entidad <> 'Habilitado' COLLATE NOCASE
+
+                                     UNION ALL
+
+                                        SELECT 
+                                            'sapGrc' as App,
+                                            'CEDULA' as TipoCruce,
+                                            'No Tiene cc el Ins.' AS CedulaApp, 
+                                            c.cedula AS CedulaConsolidado,
+                                            sg.Usuarios AS LoginApp,
+                                            c.Login AS LoginConsolidado,
+                                            c.nombre AS NombreConsolidado,
+                                            sg.Tipo_usuario AS EstadoApp,
+                                            c.estado_entidad AS EstadoConsolidado,
+                                            c.fecha_retiro AS FechaRetiro
+                                        FROM consolidado c
+                                         INNER JOIN sap_grc sg
+                                           ON 'No Tiene cc el Ins.' = c.cedula COLLATE NOCASE
+                                         WHERE sg.Tipo_usuario <> 'L Referen.' COLLATE NOCASE
+                                              and c.estado_entidad <> 'Habilitado' COLLATE NOCASE
+                                          AND (sg.Usuarios <> c.login OR sg.Usuarios IS NULL OR c.login IS NULL)";
+
+    public string GetQueryIam() => @"
+                                        SELECT 
+                                                'iam' as App,
+                                                'LOGIN' as TipoCruce,
+                                                i.Numero_de_identificacion AS CedulaApp, 
+                                                c.cedula AS CedulaConsolidado,
+                                                i.Login_ID AS LoginApp,
+                                                c.Login AS LoginConsolidado,
+                                                c.nombre AS NombreConsolidado,
+                                                i.Estado_de_la_identidad AS EstadoApp,
+                                                c.estado_entidad AS EstadoConsolidado,
+                                                c.fecha_retiro AS FechaRetiro
+                                            FROM consolidado c
+                                             INNER JOIN iam i
+                                              ON i.Login_ID = c.login COLLATE NOCASE
+                                             WHERE i.Estado_de_la_Identidad = 'Habilitado' COLLATE NOCASE
+                                                and c.estado_entidad <> 'Habilitado' COLLATE NOCASE 
+
+                                        UNION ALL
+
+                                            SELECT 
+                                                'iam' as App,
+                                                'CEDULA' as TipoCruce,
+                                                i.Numero_de_identificacion AS CedulaApp, 
+                                                c.cedula AS CedulaConsolidado,
+                                                i.Login_ID  AS LoginApp,
+                                                c.Login AS LoginConsolidado,
+                                                c.nombre AS NombreConsolidado,
+                                                i.Estado_de_la_identidad AS EstadoApp,
+                                                c.estado_entidad AS EstadoConsolidado,
+                                                c.fecha_retiro AS FechaRetiro
+                                            FROM consolidado c
+                                             INNER JOIN iam i
+                                              ON i.Numero_de_identificacion = c.cedula COLLATE NOCASE
+                                             WHERE i.Estado_de_la_Identidad = 'Habilitado' COLLATE NOCASE
+                                                 and i.ESTADO <> '1' COLLATE NOCASE
+                                                and c.estado_entidad <> 'Habilitado' COLLATE NOCASE 
+                                              AND (i.Login_ID  <> c.login OR i.Login_ID  IS NULL OR c.login IS NULL)
+                                            ";
+
+    #endregion
+}

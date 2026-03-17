@@ -1,0 +1,191 @@
+﻿@page "/sql-console"
+@rendermode InteractiveServer
+@using Helper
+@using Radzen
+@using Radzen.Blazor
+@using System.Collections
+@using static Helper.SqlService
+@inject SqlService SqlService
+@inject NotificationService NotificationService
+
+<PageTitle>Consola SQL</PageTitle>
+
+<div class="container-fluid p-4">
+    <div class="d-flex align-items-center mb-4">
+        <RadzenIcon Icon="terminal" Style="font-size: 2rem; margin-right: 10px;" />
+        <h3 class="mb-0">Consola SQL para SQLite</h3>
+    </div>
+
+    <RadzenCard Class="mb-3">
+        <div class="mb-3">
+            <RadzenText TextStyle="TextStyle.Subtitle2" TagName="TagName.H6">
+                <RadzenIcon Icon="edit_note" /> Consulta SQL:
+            </RadzenText>
+            <RadzenText TextStyle="TextStyle.Body2" Class="text-muted">
+                Escribe tu consulta y presiona Ejecutar.
+                ej: SELECT name AS Tabla, type AS Tipo FROM sqlite_master WHERE type IN ('table', 'view') ORDER BY name;
+            </RadzenText>
+        </div>
+
+        <RadzenTextArea @bind-Value="SqlQuery"
+                        Rows="6"
+                        Style="width: 100%; font-family: 'Courier New', monospace; font-size: 14px; background-color: #1e1e1e; color: #d4d4d4; border: 1px solid #444;"
+                        Placeholder="SELECT * FROM sqlite_master;" />
+
+        <div class="mt-3 d-flex gap-2">
+            <RadzenButton Text="Ejecutar" Icon="play_arrow" ButtonStyle="ButtonStyle.Success"
+                          IsBusy="@IsLoading" Click="@ExecuteQuery" Disabled="@(string.IsNullOrWhiteSpace(SqlQuery))" />
+
+            <RadzenButton Text="Limpiar" Icon="clear" ButtonStyle="ButtonStyle.Light" Click="@LimpiarPantalla" />
+            <RadzenButton Text="Tablas" Icon="table_chart" ButtonStyle="ButtonStyle.Info" Click="@MostrarTablas" />
+        </div>
+    </RadzenCard>
+
+    @if (!string.IsNullOrEmpty(ErrorMessage))
+    {
+        <RadzenAlert AlertStyle="AlertStyle.Danger" ShowIcon="true" Variant="Variant.Flat" Class="mb-3">
+            <strong>Error:</strong> @ErrorMessage
+        </RadzenAlert>
+    }
+
+    @if (Results != null && CurrentColumns != null && CurrentColumns.Any())
+    {
+        <RadzenCard>
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h5>Resultados <small class="text-muted">(@Results.Count filas)</small></h5>
+            </div>
+
+            <RadzenDataGrid Data="@Results"
+                            TItem="IDictionary<string, object>"
+                            AllowPaging="true"
+                            PageSize="18"
+                            AllowSorting="false"
+                            AllowFiltering="false"
+                            Density="Density.Compact"
+                            GridLines="DataGridGridLines.Both"
+                            Style="height: 500px;">
+                <Columns>
+                    <RadzenDataGridColumn TItem="IDictionary<string, object>" Title="#" Width="50px">
+                        <Template Context="data">
+                            @(Results.IndexOf(data) + 1)
+                        </Template>
+                    </RadzenDataGridColumn>
+
+                    @foreach (var col in CurrentColumns)
+                    {
+                        <RadzenDataGridColumn TItem="IDictionary<string, object>" Title="@col">
+                            <Template Context="data">
+                                <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block;">
+                                    @GetColumnValue(data, col)
+                                </span>
+                            </Template>
+                        </RadzenDataGridColumn>
+                    }
+                </Columns>
+            </RadzenDataGrid>
+        </RadzenCard>
+    }
+    else if (LastResult != null && LastResult.Success && LastResult.RecordsAffected >= 0)
+    {
+        <RadzenAlert AlertStyle="AlertStyle.Success" ShowIcon="true" Variant="Variant.Flat">
+            @LastResult.Message
+        </RadzenAlert>
+    }
+</div>
+
+@code {
+    private string SqlQuery { get; set; } = "";
+    private bool IsLoading { get; set; } = false;
+    private string? ErrorMessage { get; set; }
+
+    private List<IDictionary<string, object>>? Results;
+    private List<string> CurrentColumns = new();
+    private SqlExecutionResult? LastResult;
+
+    private async Task ExecuteQuery()
+    {
+        if (string.IsNullOrWhiteSpace(SqlQuery)) return;
+
+        // Limpiamos ANTES de ejecutar
+        IsLoading = true;
+        Results = null;
+        ErrorMessage = null;
+        CurrentColumns = new();
+        LastResult = null;
+
+        // CRÍTICO: Forzar actualización del UI
+        StateHasChanged();
+        await Task.Delay(50); // Dar tiempo al navegador para actualizar
+
+        try
+        {
+            // Ejecutamos la consulta
+            LastResult = await SqlService.ExecuteSqlAsync(SqlQuery);
+
+            if (LastResult.Success)
+            {
+                if (LastResult.Data != null && LastResult.Data.Count > 0)
+                {
+                    CurrentColumns = LastResult.ColumnNames ?? new();
+                    Results = LastResult.Data;
+
+                    // Log para debugging
+                    Console.WriteLine($"✅ Consulta exitosa: {Results.Count} filas, {CurrentColumns.Count} columnas");
+                }
+                else if (LastResult.RecordsAffected >= 0)
+                {
+                    // Comando que no devuelve datos (INSERT, UPDATE, DELETE)
+                    Console.WriteLine($"✅ Comando ejecutado: {LastResult.RecordsAffected} filas afectadas");
+                }
+                else
+                {
+                    // SELECT sin resultados
+                    Results = new List<IDictionary<string, object>>();
+                    CurrentColumns = LastResult.ColumnNames ?? new();
+                    Console.WriteLine("⚠️ Consulta sin resultados");
+                }
+            }
+            else
+            {
+                ErrorMessage = LastResult.Message;
+                Console.WriteLine($"❌ Error: {ErrorMessage}");
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Error inesperado: {ex.Message}";
+            Console.WriteLine($"❌ Excepción: {ex}");
+        }
+        finally
+        {
+            IsLoading = false;
+            // CRÍTICO: Forzar actualización final
+            StateHasChanged();
+        }
+    }
+
+    private void LimpiarPantalla()
+    {
+        SqlQuery = "";
+        Results = null;
+        CurrentColumns = new();
+        LastResult = null;
+        ErrorMessage = null;
+        StateHasChanged();
+    }
+
+    private async Task MostrarTablas()
+    {
+        SqlQuery = "SELECT name AS 'Nombre Tabla', sql AS 'Definición (DDL)' FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name;";
+        await ExecuteQuery();
+    }
+
+    private string GetColumnValue(IDictionary<string, object> data, string colName)
+    {
+        if (data.TryGetValue(colName, out var value))
+        {
+            return value?.ToString() ?? "NULL";
+        }
+        return "";
+    }
+}

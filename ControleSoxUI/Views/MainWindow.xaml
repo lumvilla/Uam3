@@ -1,0 +1,312 @@
+﻿<Window x:Class="ControleSoxUI.Views.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:ui="http://schemas.modernwpf.com/2019"
+        xmlns:local="clr-namespace:ControleSoxUI.Views"
+        xmlns:vm="clr-namespace:ControleSoxUI.ViewModels"
+        xmlns:models="clr-namespace:ControleSoxUI.Models"
+        mc:Ignorable="d"
+        Title="Control Retiros - UAM3" 
+        Height="768" 
+        Width="1366"
+        WindowStartupLocation="CenterScreen"
+        ui:WindowHelper.UseModernWindowStyle="True"
+        Background="{DynamicResource SystemControlPageBackgroundChromeLowBrush}">
+
+    <Window.Resources>
+        <!-- Converter para visibilidad de subitems -->
+        <BooleanToVisibilityConverter x:Key="BoolToVisConverter"/>
+
+        <!-- Template para items de menú con subitems -->
+        <DataTemplate x:Key="MenuItemTemplate" DataType="{x:Type models:MenuItemModel}">
+            <StackPanel>
+                <!-- Item principal -->
+                <Button Background="Transparent"
+                        BorderThickness="0"
+                        Padding="12,10"
+                        HorizontalContentAlignment="Stretch"
+                        Command="{Binding DataContext.MenuItemClickCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                        CommandParameter="{Binding}"
+                        Cursor="Hand">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                            <Style.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Background" Value="{DynamicResource SystemControlHighlightListLowBrush}"/>
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Icono -->
+                        <TextBlock Grid.Column="0"
+                                   FontFamily="Segoe MDL2 Assets"
+                                   FontSize="18"
+                                   Text="{Binding Icon}"
+                                   VerticalAlignment="Center"
+                                   Margin="0,0,12,0"
+                                   Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"/>
+
+                        <!-- Título -->
+                        <TextBlock Grid.Column="1"
+                                   Text="{Binding Title}"
+                                   FontSize="14"
+                                   FontWeight="Normal"
+                                   VerticalAlignment="Center"
+                                   Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"/>
+
+                        <!-- Flecha para expandir (solo si tiene subitems) -->
+                        <TextBlock Grid.Column="2"
+                                   FontFamily="Segoe MDL2 Assets"
+                                   FontSize="12"
+                                   VerticalAlignment="Center"
+                                   Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                   Visibility="{Binding HasSubItems, Converter={StaticResource BoolToVisConverter}}">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Text" Value="&#xE76C;"/>
+                                    <!-- ChevronDown -->
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsExpanded}" Value="True">
+                                            <Setter Property="Text" Value="&#xE70E;"/>
+                                            <!-- ChevronUp -->
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </Grid>
+                </Button>
+
+                <!-- Subitems (expandibles) -->
+                <ItemsControl ItemsSource="{Binding SubItems}"
+                              Margin="32,0,0,0"
+                              Visibility="{Binding IsExpanded, Converter={StaticResource BoolToVisConverter}}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Button Background="Transparent"
+                                    BorderThickness="0"
+                                    Padding="8,8"
+                                    HorizontalContentAlignment="Stretch"
+                                    Command="{Binding DataContext.MenuItemClickCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                    CommandParameter="{Binding}"
+                                    Cursor="Hand"
+                                    Margin="0,2">
+                                <Button.Style>
+                                    <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                                        <Style.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter Property="Background" Value="{DynamicResource SystemControlHighlightListLowBrush}"/>
+                                            </Trigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- Icono del subitem -->
+                                    <TextBlock Grid.Column="0"
+                                               FontFamily="Segoe MDL2 Assets"
+                                               FontSize="16"
+                                               Text="{Binding Icon}"
+                                               VerticalAlignment="Center"
+                                               Margin="0,0,10,0"
+                                               Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+
+                                    <!-- Título del subitem -->
+                                    <TextBlock Grid.Column="1"
+                                               Text="{Binding Title}"
+                                               FontSize="13"
+                                               VerticalAlignment="Center"
+                                               TextWrapping="Wrap"
+                                               Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"/>
+
+                                    <!-- Flecha para sub-subitems si existen -->
+                                    <TextBlock Grid.Column="2"
+                                               FontFamily="Segoe MDL2 Assets"
+                                               FontSize="10"
+                                               Text="&#xE76C;"
+                                               VerticalAlignment="Center"
+                                               Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                               Visibility="{Binding HasSubItems, Converter={StaticResource BoolToVisConverter}}"/>
+                                </Grid>
+                            </Button>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </DataTemplate>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <!-- Panel lateral -->
+            <ColumnDefinition Width="Auto"/>
+            <!-- Contenido principal -->
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Panel de Navegación Lateral -->
+        <Grid Grid.Column="0" 
+              Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}">
+            <Grid.Width>
+                <Binding Path="IsPaneOpen">
+                    <Binding.Converter>
+                        <local:BoolToWidthConverter CollapsedWidth="60" ExpandedWidth="280"/>
+                    </Binding.Converter>
+                </Binding>
+            </Grid.Width>
+
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Header con botón de hamburguesa y título -->
+            <Grid Grid.Row="0" Height="56" Background="{DynamicResource SystemControlBackgroundAccentBrush}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Botón Hamburguesa -->
+                <Button Grid.Column="0"
+                        Width="48"
+                        Height="48"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Command="{Binding TogglePaneCommand}"
+                        VerticalAlignment="Center"
+                        HorizontalAlignment="Center"
+                        Cursor="Hand">
+                    <TextBlock FontFamily="Segoe MDL2 Assets"
+                               FontSize="18"
+                               Text="&#xE700;"
+                               Foreground="White"/>
+                </Button>
+
+                <!-- Título de la aplicación -->
+                <StackPanel Grid.Column="1" 
+                            VerticalAlignment="Center"
+                            Orientation="Horizontal"
+                            Visibility="{Binding IsPaneOpen, Converter={StaticResource BoolToVisConverter}}">
+                    <TextBlock Text="Control Retiros"
+                               FontSize="18"
+                               FontWeight="SemiBold"
+                               Foreground="White"
+                               Margin="8,0,0,0"/>
+                </StackPanel>
+            </Grid>
+
+            <!-- Lista de menú -->
+            <ScrollViewer Grid.Row="1" 
+                          VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled">
+                <ItemsControl ItemsSource="{Binding MenuItems}"
+                              Margin="0,8"
+                              ItemTemplate="{StaticResource MenuItemTemplate}"/>
+            </ScrollViewer>
+
+            <!-- Footer con información -->
+            <Border Grid.Row="2" 
+                    BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                    BorderThickness="0,1,0,0"
+                    Padding="12"
+                    Visibility="{Binding IsPaneOpen, Converter={StaticResource BoolToVisConverter}}">
+                <StackPanel>
+                    <TextBlock Text="CONTROLES RETIROS APPS V 1.0"
+                               FontSize="11"
+                               Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+                    <TextBlock Text="© 2025 Eimer Yesith"
+                               FontSize="10"
+                               Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- Contenido Principal -->
+        <Grid Grid.Column="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <!-- Barra superior -->
+            <Border Grid.Row="0" 
+                    Height="56"
+                    Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
+                    BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                    BorderThickness="0,0,0,1">
+                <Grid Margin="24,0">
+                    <TextBlock Text="{Binding SelectedMenuItem.Title, FallbackValue='Control de Retiros'}"
+                               FontSize="20"
+                               FontWeight="SemiBold"
+                               VerticalAlignment="Center"
+                               Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"/>
+                </Grid>
+            </Border>
+
+            <!-- Área de contenido -->
+            <Border Grid.Row="1" 
+                    Margin="24"
+                    Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
+                    CornerRadius="8"
+                    Padding="32">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="16" 
+                                      ShadowDepth="2" 
+                                      Opacity="0.1" 
+                                      Color="Black"/>
+                </Border.Effect>
+
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel>
+                        <!-- Icono y título de bienvenida -->
+                        <TextBlock FontFamily="Segoe MDL2 Assets"
+                                   FontSize="64"
+                                   Text="&#xE80F;"
+                                   HorizontalAlignment="Center"
+                                   Foreground="{DynamicResource SystemControlForegroundAccentBrush}"
+                                   Margin="0,32,0,24"/>
+
+                        <TextBlock Text="{Binding SelectedContent}"
+                                   FontSize="16"
+                                   TextWrapping="Wrap"
+                                   TextAlignment="Center"
+                                   LineHeight="24"
+                                   Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
+                                   HorizontalAlignment="Center"
+                                   MaxWidth="600"/>
+
+                        <!-- Descripción si existe -->
+                        <TextBlock Text="{Binding SelectedMenuItem.Description}"
+                                   FontSize="14"
+                                   TextWrapping="Wrap"
+                                   TextAlignment="Center"
+                                   LineHeight="22"
+                                   Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                   HorizontalAlignment="Center"
+                                   MaxWidth="600"
+                                   Margin="0,16,0,0"
+                                   Visibility="{Binding SelectedMenuItem.Description, Converter={StaticResource BoolToVisConverter}}"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+        </Grid>
+    </Grid>
+</Window>

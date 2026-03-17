@@ -1,0 +1,319 @@
+﻿@page "/uam3/cargue-insumos-app"
+@using Data.Interfaces.CapaApp.InsertExcelBD
+@using Data.Interfaces.CapaApp.Uam3.IAppInsumosRobot
+@using System.Dynamic
+@using Data.Interfaces.CapaApp.Uam3.IDataInsumosRobot
+@using RetirosUIBlazor.Components.Pages.Helpers
+@inject IAppInsumosRobot RobotService
+@inject IDataInsumosRobot DatosRepo
+@inject NotificationService NotificationService
+@inject DialogService DialogService
+
+<PageTitle>Cargue Insumos Aplicaciones</PageTitle>
+
+<RadzenStack Orientation="Orientation.Vertical" Gap="1rem">
+    <RadzenText Text="Gestion de Insumos Robot (Aplicaciones)" TextStyle="TextStyle.H4" />
+
+    <RadzenCard Variant="Variant.Outlined" Class="rz-background-color-warning-lighter rz-border-warning">
+        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Start" Gap="0.5rem">
+            <RadzenIcon Icon="warning" IconColor="@Colors.Warning" />
+            <RadzenStack Gap="0">
+                <RadzenText TextStyle="TextStyle.Subtitle2" TagName="TagName.H3" Text="Importante: Rutas de Archivos" />
+                <RadzenText TextStyle="TextStyle.Body2">
+                    Recuerde que para cargar la informacion, los archivos Excel deben estar ubicados previamente en las carpetas configuradas en el servidor.
+                    Este proceso leerá los archivos, creara las tablas dinámicamente y cargara la información.
+                </RadzenText>
+            </RadzenStack>              
+        </RadzenStack>
+    </RadzenCard>
+
+    <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem">
+        <RadzenButton Text="Ejecutar Carga Robot"
+                      Icon="smart_toy"
+                      ButtonStyle="ButtonStyle.Primary"
+                      Click="@EjecutarRobot"
+                      IsBusy="@isExecuting"
+                      BusyText="Procesando archivos..." />
+        @if (ultimoProceso != null)
+        {
+            <RadzenText  TextStyle="TextStyle.Caption" Text="@($"ultima ejecucion: {ultimoProceso.Value:dd/MM/yyyy HH:mm:ss}")" />
+        }
+    </RadzenStack>
+
+
+    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
+        <RadzenLabel Text="Seleccione Aplicación a Consultar:" Style="font-weight:bold;" />
+        <RadzenDropDown Data="@listaApps"
+                        @bind-Value="@appSeleccionada"
+                        ValueProperty="Value"
+                        TextProperty="Text"
+                        Placeholder="Seleccione una aplicación..."
+                        Change="@OnAppChanged"
+                        Style="width: 300px;" />
+    </RadzenStack>
+
+    @if (columnasIdentificadas != null && columnasIdentificadas.Any())
+    {
+        <RadzenCard Variant="Variant.Outlined">
+            <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" AlignItems="AlignItems.End">
+                <RadzenStack Gap="0.25rem" Style="flex: 1;">
+                    <RadzenLabel Text="Buscar en columna:" />
+                    <RadzenDropDown Data="@columnasIdentificadas"
+                                    @bind-Value="@columnaFiltro"
+                                    Placeholder="Seleccione columna..."
+                                    Style="width: 100%;" />
+                </RadzenStack>
+
+                <RadzenStack Gap="0.25rem" Style="flex: 2;">
+                    <RadzenLabel Text="Valor a buscar:" />
+                    <RadzenTextBox @bind-Value="@valorBusqueda"
+                                   Placeholder="Ingrese texto a buscar..."
+                                   Style="width: 100%;"
+                                   @onkeypress="@OnKeyPress" />
+                </RadzenStack>
+
+                <RadzenButton Text="Buscar"
+                              Icon="search"
+                              ButtonStyle="ButtonStyle.Success"
+                              Click="@BuscarDatos"
+                              Disabled="@(string.IsNullOrEmpty(columnaFiltro))" />
+
+                <RadzenButton Text="Limpiar"
+                              Icon="clear"
+                              ButtonStyle="ButtonStyle.Light"
+                              Click="@LimpiarFiltros" />
+            </RadzenStack>
+        </RadzenCard>
+    }
+
+    @if (columnasIdentificadas != null && columnasIdentificadas.Any())
+    {
+        <RadzenText TextStyle="TextStyle.Caption" Text="@($"Total Registros en BD: {count} (Tabla: {tablaSeleccionada})")" />
+
+        <RadzenDataGrid @ref="grid"
+                        Data="@datosDinamicos"
+                        Count="@count"
+                        LoadData="@LoadData"
+                        TItem="dynamic"
+                        AllowVirtualization="true"
+                        Style="height:500px"
+                        AllowSorting="true"
+                        Density="Density.Compact">
+            <Columns>
+                @foreach (var col in columnasIdentificadas)
+                {
+                    <RadzenDataGridColumn TItem="dynamic"
+                                          Title="@col"
+                                          Property="@col"
+                                          Sortable="true">
+                        <Template Context="data">
+                            @ObtenerValor(data, col)
+                        </Template>
+                    </RadzenDataGridColumn>
+                }
+            </Columns>
+        </RadzenDataGrid>
+    }
+    else if (!string.IsNullOrEmpty(appSeleccionada) && columnasIdentificadas.Count == 0)
+    {
+        <RadzenProgressBar Value="100" Mode="ProgressBarMode.Indeterminate" />
+    }
+    else if (string.IsNullOrEmpty(appSeleccionada))
+    {
+        <RadzenAlert Severity="NotificationSeverity.Info" Variant="Variant.Flat" Shade="Shade.Lighter">
+            Seleccione una aplicación para visualizar los datos.
+        </RadzenAlert>
+    }
+
+</RadzenStack>
+
+@code {
+    RadzenDataGrid<dynamic>? grid;
+    private bool isExecuting = false;
+    private string? appSeleccionada;
+    private string? tablaSeleccionada;
+
+    private string? columnaFiltro;
+    private string? valorBusqueda;
+    private string? filtroActual;
+    private DateTime? ultimoProceso;
+
+    private IEnumerable<dynamic>? datosDinamicos;
+    private int count;
+    private List<string> columnasIdentificadas = new();
+
+    private List<AppItem> listaApps = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        CargarAppsDesdeConfiguracion();
+        await CargarUltimaFechaCargue();
+    }
+
+    private async Task CargarUltimaFechaCargue()
+    {
+        try
+        {
+            ultimoProceso = await Task.Run(() => DatosRepo.ObtenerUltimaFechaCargue("crm_portal"));
+        }
+        catch
+        {
+            ultimoProceso = null;
+        }
+    }
+
+                
+
+    private void CargarAppsDesdeConfiguracion()
+    {
+        var appsConfiguradas = RobotService.ObtenerConfiguracionAppsActivas();
+        listaApps = appsConfiguradas.Select(kvp => new AppItem
+        {
+            Text = FormatearNombre(kvp.Key),
+            Value = kvp.Value
+        }).ToList();
+    }
+
+    private string FormatearNombre(string nombrePropiedad)
+    {
+        return nombrePropiedad switch
+        {
+            "CrmPortal" => "Crm Portal",
+            "SapErp" => "Sap Erp",
+            "DwhFijo" => "Dwh Fijo",
+            "DwhMovil" => "Dwh Movil",
+            "SapGrc" => "Sap Grc",
+            "OpenUne" => "Open Une",
+            "Iam" => "Iam",
+            "BigData" => "Big Data",
+            _ => nombrePropiedad
+        };
+    }
+
+    private async Task OnAppChanged(object value)
+    {
+        tablaSeleccionada = value?.ToString();
+        columnasIdentificadas.Clear();
+        datosDinamicos = null;
+        count = 0;
+        LimpiarFiltrosInterno();
+
+        if (string.IsNullOrEmpty(tablaSeleccionada)) return;
+
+        try
+        {
+            var cols = await Task.Run(() => DatosRepo.ObtenerColumnasTabla(tablaSeleccionada));
+            columnasIdentificadas = cols.ToList();
+
+            if (grid != null)
+            {
+                await grid.Reload();
+            }
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(NotificationSeverity.Error, "Error Esquema", $"No se pudieron leer las columnas de {tablaSeleccionada}: {ex.Message}");
+        }
+    }
+
+    private async Task OnKeyPress(KeyboardEventArgs args)
+    {
+        if (args.Key == "Enter")
+        {
+            await BuscarDatos();
+        }
+    }
+
+    private async Task BuscarDatos()
+    {
+        if (string.IsNullOrEmpty(columnaFiltro) || string.IsNullOrEmpty(valorBusqueda))
+        {
+            NotificationService.Notify(NotificationSeverity.Warning, "Advertencia", "Debe seleccionar una columna e ingresar un valor para buscar.");
+            return;
+        }
+
+        var valorSanitizado = valorBusqueda.Replace("'", "''");
+
+        filtroActual = $"\"{columnaFiltro}\" LIKE '%{valorSanitizado}%'";
+
+        if (grid != null)
+        {
+            await grid.FirstPage(true);
+        }
+    }
+
+    private async Task LimpiarFiltros()
+    {
+        LimpiarFiltrosInterno();
+        if (grid != null)
+        {
+            await grid.Reload();
+        }
+    }
+
+    private void LimpiarFiltrosInterno()
+    {
+        columnaFiltro = null;
+        valorBusqueda = null;
+        filtroActual = null;
+    }
+
+    private async Task LoadData(LoadDataArgs args)
+    {
+        if (string.IsNullOrEmpty(tablaSeleccionada)) return;
+
+        try
+        {
+            await Task.Run(() =>
+            {
+                var resultado = DatosRepo.ObtenerDatosPaginados(
+                    tablaSeleccionada,
+                    args.Skip ?? 0,
+                    args.Top ?? 20,
+                    args.OrderBy,
+                    filtroActual
+                );
+
+                datosDinamicos = resultado.Datos;
+                count = resultado.TotalRegistros;
+            });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Error SQL]: {ex.Message}");
+            NotificationService.Notify(NotificationSeverity.Error, "Error en Búsqueda", ex.Message);
+            datosDinamicos = new List<dynamic>();
+            count = 0;
+        }
+    }
+
+    private async Task EjecutarRobot()
+    {
+        await DialogService.OpenAsync<RobotConsoleDialog>("Ejecucion de Insumos Robot(Apps)",
+               new Dictionary<string, object>(),
+               new DialogOptions() { Width = "700px", Height = "550px", CloseDialogOnEsc = false, CloseDialogOnOverlayClick = false });
+
+        NotificationService.Notify(NotificationSeverity.Success, "Proceso Finalizado", "Revise los logs para más detalles.");
+
+        if (!string.IsNullOrEmpty(appSeleccionada))
+        {
+            await OnAppChanged(appSeleccionada);
+        }
+    }
+
+    string ObtenerValor(dynamic item, string key)
+    {
+        var dic = (IDictionary<string, object>)item;
+        if (dic.ContainsKey(key) && dic[key] != null)
+        {
+            return dic[key].ToString()!;
+        }
+        return "";
+    }
+
+    public class AppItem
+    {
+        public string Text { get; set; }
+        public string Value { get; set; }
+    }
+}
