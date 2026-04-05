@@ -2,195 +2,332 @@
 @inherits LayoutComponentBase
 @using Radzen
 @using Radzen.Blazor
+@inject NavigationManager Nav
 
-<RadzenLayout Style="min-height:100vh">
-    <RadzenHeader>
-        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="1rem" Class="rz-p-2">
-            <RadzenSidebarToggle Click="@(() => sidebarExpanded = !sidebarExpanded)" />
-            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
-                <RadzenIcon Icon="security" Style="font-size: 28px; color: var(--rz-primary);" />
-                <RadzenStack Gap="0" Orientation="Orientation.Vertical">
-                    <RadzenText Text="Control de Retiros" TextStyle="TextStyle.H6" Style="margin: 0; font-weight: 600;" />
-                    <RadzenText Text="Sistema de Gestion" TextStyle="TextStyle.Caption" Style="margin: 0; font-weight: 600;" />
-                </RadzenStack>
-            </RadzenStack>
-        </RadzenStack>
+<RadzenLayout Style="min-height:100vh; background:#0f1117;">
+
+    <!-- ══ HEADER ══ -->
+    <RadzenHeader Style="background:#1a1d27; border-bottom:1px solid #2d3148; box-shadow:0 2px 8px rgba(0,0,0,.5); z-index:1000;">
+        <div style="display:flex;align-items:center;gap:12px;padding:0 16px;height:60px;">
+            <button @onclick="ToggleSidebar"
+                    style="background:none;border:none;cursor:pointer;color:#6b7280;font-size:20px;padding:4px;border-radius:6px;display:flex;align-items:center;">
+                ☰
+            </button>
+            <div style="width:36px;height:36px;background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">🔐</div>
+            <div>
+                <div style="font-size:16px;font-weight:700;color:#fff;line-height:1.2;">Control de Retiros</div>
+                <div style="font-size:11px;color:#6366f1;font-weight:500;">Sistema de Gestión</div>
+            </div>
+            <div style="margin-left:auto;display:flex;align-items:center;gap:10px;">
+                <div style="background:#13151f;border:1px solid #2d3148;border-radius:20px;padding:6px 14px;font-size:12px;color:#9ca3af;display:flex;align-items:center;gap:6px;">
+                    <span style="width:7px;height:7px;border-radius:50%;background:#22c55e;display:inline-block;flex-shrink:0;"></span>
+                    BD Conectada
+                </div>
+                <div style="background:#13151f;border:1px solid #2d3148;border-radius:20px;padding:6px 14px;font-size:12px;color:#9ca3af;">
+                    📅 @DateTime.Now.ToString("dd/MM/yyyy")
+                </div>
+            </div>
+        </div>
     </RadzenHeader>
 
-    <RadzenSidebar @bind-Expanded="sidebarExpanded" Style="width: 300px;">
-        <div class="rz-p-4">
-            <RadzenPanelMenu>
-                @* 1. Cargue de Insumos *@
-                <RadzenPanelMenuItem Text="Cargue de Insumos" Icon="folder_open" Style="font-weight: 600; background-color: var(--rz-base-100);">
-                    <RadzenPanelMenuItem Text="DA/Retiros/Terceros" Icon="upload" Path="/cargue-retiros" Style="padding-left: 2rem;" />
-                </RadzenPanelMenuItem>
+    <!-- ══ SIDEBAR ══ -->
+    <RadzenSidebar Style="@SidebarStyle">
+        <div style="display:flex;flex-direction:column;height:100%;overflow:hidden;">
 
-                @* 2. UAM3 *@
-                <RadzenPanelMenuItem Text="UAM3" Icon="admin_panel_settings" Style="font-weight: 600; margin-top: 0.5rem; background-color: var(--rz-base-100);">
+            <!-- NAV SCROLL AREA -->
+            <div style="flex:1;overflow-y:auto;padding:12px 8px 8px;">
 
-                    @* Capa Aplicación *@
-                    <RadzenPanelMenuItem Text="Capa Aplicación" Icon="layers" Style="font-weight: 500; background-color: var(--rz-base-200); padding-left: 1.5rem;">
-                        <RadzenPanelMenuItem Text="Cargue de Insumos" Icon="cloud_upload" Path="/uam3/cargue-insumos-app" Style="padding-left: 3rem;" />
-                        <RadzenPanelMenuItem Text="Usuarios a Deshabilitar" Icon="person_remove" Path="/uam3/user-disable" Style="padding-left: 3rem;" />
-                        <RadzenPanelMenuItem Text="Service Desk" Icon="support_agent" Path="/uam3/ServicesDesk/retiros-user" Style="padding-left: 3rem;" />
-                        <RadzenPanelMenuItem Text="Reportes" Icon="assessment" Path="/uam3/reportes" Style="padding-left: 3rem;" />
-                    </RadzenPanelMenuItem>
+                @* INSUMOS *@
+                <div class="nav-section-label">Insumos</div>
+                @NavParent("folder_open", "Cargue de Insumos", "insumos")
+                @if (expanded["insumos"])
+                {
+                    <div class="nav-children">
+                        @NavChild("upload", "DA / Retiros / Terceros", "/cargue-retiros")
+                    </div>
+                }
 
-                    @* Capa Base de Datos *@
-                    <RadzenPanelMenuItem Text="Capa Base de Datos" Icon="storage" Style="font-weight: 500; background-color: var(--rz-base-200); padding-left: 1.5rem;">
-                        <RadzenPanelMenuItem Text="Cargue de Insumos" Icon="cloud_upload" Path="/uam3/cargue-insumos-bd" Style="padding-left: 3rem;" />
-                        <RadzenPanelMenuItem Text="Usuarios a Deshabilitar" Icon="person_remove" Path="/uam3/user-disable-Bd" Style="padding-left: 3rem;" />
-                        <RadzenPanelMenuItem Text="Service Desk" Icon="support_agent" Path="/uam3/service-desk" Style="padding-left: 3rem;" />
-                        <RadzenPanelMenuItem Text="Reportes" Icon="assessment" Path="/uam3/reportes-bd" Style="padding-left: 3rem;" />
-                    </RadzenPanelMenuItem>
-                </RadzenPanelMenuItem>
+                @* UAM3 *@
+                <div class="nav-section-label">UAM3</div>
+                @NavParent("layers", "Capa Aplicación", "capaapp")
+                @if (expanded["capaapp"])
+                {
+                    <div class="nav-children">
+                        @NavChild("cloud_upload", "Cargue de Insumos", "/uam3/cargue-insumos-app")
+                        @NavChild("person_remove", "Usuarios a Deshabilitar", "/uam3/user-disable")
+                        @NavChild("support_agent", "Service Desk", "/uam3/ServicesDesk/retiros-user")
+                        @NavChild("assessment", "Reportes", "/uam3/reportes")
+                    </div>
+                }
+                @NavParent("storage", "Capa Base de Datos", "capabd")
+                @if (expanded["capabd"])
+                {
+                    <div class="nav-children">
+                        @NavChild("cloud_upload", "Cargue de Insumos", "/uam3/cargue-insumos-bd")
+                        @NavChild("person_remove", "Usuarios a Deshabilitar", "/uam3/user-disable-Bd")
+                        @NavChild("support_agent", "Service Desk", "/uam3/service-desk")
+                        @NavChild("assessment", "Reportes", "/uam3/reportes-bd")
+                    </div>
+                }
 
-                @* 3. Retiros No Sox *@
-                <RadzenPanelMenuItem Text="Retiros No Sox" Icon="group_remove" Style="font-weight: 600; margin-top: 0.5rem; background-color: var(--rz-base-100);">
-                    <RadzenPanelMenuItem Text="Cargue de Insumos" Icon="cloud_upload" Path="/nosox/cargue-insumos" Style="padding-left: 2rem;" />
-                    <RadzenPanelMenuItem Text="Usuarios a Deshabilitar" Icon="person_remove" Path="/nosox/user-disable" Style="padding-left: 2rem;" />
+                @* RETIROS NO SOX *@
+                <div class="nav-section-label">Retiros No Sox</div>
+                @NavParent("group_remove", "Retiros No Sox", "nosox")
+                @if (expanded["nosox"])
+                {
+                    <div class="nav-children">
+                        @NavChild("cloud_upload", "Cargue de Insumos", "/nosox/cargue-insumos")
+                        @NavChild("person_remove", "Usuarios a Deshabilitar", "/nosox/user-disable")
+                        @NavParentSub("support_agent", "Service Desk", "nosoxsd")
+                        @if (expanded["nosoxsd"])
+                        {
+                            <div class="nav-children" style="margin-left:12px;">
+                                @NavChild("add_task", "Generar OC Retiros", "/nosox/sd/realizar-oc")
+                                @NavChild("fact_check", "Validar Estado OC", "/nosox/sd/consultar-estado")
+                            </div>
+                        }
+                        @NavChild("assessment", "Reportes", "/nosox/reportes")
+                    </div>
+                }
 
-                    <RadzenPanelMenuItem Text="Service Desk" Icon="support_agent" Style="font-weight: 500; background-color: var(--rz-base-200); padding-left: 2rem;">
-                        <RadzenPanelMenuItem Text="Generar OC Retiros" Icon="add_task" Path="/nosox/sd/realizar-oc" Style="padding-left: 3.5rem;" />
-                        <RadzenPanelMenuItem Text="Validar Estado OC" Icon="fact_check" Path="/nosox/sd/consultar-estado" Style="padding-left: 3.5rem;" />
-                    </RadzenPanelMenuItem>
+                @* HERRAMIENTAS *@
+                <div class="nav-section-label">Herramientas</div>
+                @NavChild("terminal", "Ejecutar SQL", "/sql-console")
+                @NavChild("help", "Guía de Usuario", "/guia")
 
-                    <RadzenPanelMenuItem Text="Reportes" Icon="assessment" Path="/nosox/reportes" Style="padding-left: 2rem;" />
-                </RadzenPanelMenuItem>
+            </div>
 
-                @* 4. Consola SQL *@
-                <RadzenPanelMenuItem Text="Ejecutar SQL" Icon="terminal" Path="/sql-console" Style="font-weight: 600; margin-top: 0.5rem; background-color: var(--rz-base-100);" />
-
-                @* 5. Guía *@
-                <RadzenPanelMenuItem Text="Guía de Usuario" Icon="help" Path="/guia" Style="font-weight: 600; margin-top: 0.5rem; background-color: var(--rz-base-100);" />
-
-            </RadzenPanelMenu>
-        </div>
-
-        @* Información del Usuario en el Sidebar *@
-        <div style="position: absolute; bottom: 0; width: 100%; border-top: 1px solid var(--rz-border-color); padding: 1rem; background-color: var(--rz-base-50);">
-            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
-                <RadzenIcon Icon="account_circle" Style="font-size: 32px; color: var(--rz-primary);" />
-                <RadzenStack Gap="0" Style="flex: 1;">
-                    <RadzenText Text="Control Retiros" TextStyle="TextStyle.Body2" Style="margin: 0; font-weight: 500;" />
-                    <RadzenText Text="©️Eimer Yesith 2025" TextStyle="TextStyle.Caption" Style="margin: 0; color: var(--rz-text-secondary-color);" />
-                </RadzenStack>
-            </RadzenStack>
+            <!-- FOOTER -->
+            <div style="border-top:1px solid #2d3148;padding:14px 16px;background:#1a1d27;flex-shrink:0;">
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <div style="width:34px;height:34px;background:linear-gradient(135deg,#0B3A82,#0B3A82);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0;">TG</div>
+                    <div>
+                        <div style="font-size:13px;font-weight:600;color:#e2e8f0;">Control Retiros</div>
+                        <div style="font-size:11px;color:#0B3A82;">Tigo Telecomunicaciones</div>
+                    </div>
+                </div>
+            </div>
         </div>
     </RadzenSidebar>
 
+    <!-- ══ BODY ══ -->
     <RadzenBody>
-        <div class="rz-p-4" style="background-color: var(--rz-base-50); min-height: calc(100vh - 120px);">
-            <RadzenCard Style="margin-bottom: 1rem;">
-                @Body
-            </RadzenCard>
+        <div style="background:#0f1117;min-height:calc(100vh - 60px);padding:24px;">
+            @Body
         </div>
     </RadzenBody>
 
-    <RadzenFooter Style="text-align: center; padding: 1rem; background-color: var(--rz-base-100); border-top: 1px solid var(--rz-border-color);">
-        <RadzenStack Orientation="Orientation.Vertical" Gap="0.25rem" AlignItems="AlignItems.Center">
-            <RadzenText Text="@($"© {DateTime.Now.Year} Control de Retiros - Sistema de Gestión UAM")" TextStyle="TextStyle.Body2" Style="margin: 0;" />
-            <RadzenText Text="Desarrollo por Eimer Yesith" TextStyle="TextStyle.Caption" Style="margin: 0; color: var(--rz-text-secondary-color);" />
-        </RadzenStack>
-    </RadzenFooter>
 </RadzenLayout>
 
-@* ⚠️ CRÍTICO: Componentes necesarios para Radzen *@
 <RadzenDialog />
 <RadzenNotification />
 <RadzenContextMenu />
 <RadzenTooltip />
 
 <style>
-    /* Mejoras visuales para el menú */
-    .rz-panel-menu-item-wrapper {
-        margin-bottom: 2px;
-        border-radius: 4px;
-        transition: all 0.2s ease;
+    /* ── SECTION LABELS ── */
+    .nav-section-label {
+        padding: 16px 12px 5px;
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 1.4px;
+        color: #3d4166;
+        font-weight: 700;
     }
 
-        .rz-panel-menu-item-wrapper:hover {
-            background-color: var(--rz-primary-lighter) !important;
-        }
-
-        .rz-panel-menu-item-wrapper.rz-state-active {
-            background-color: var(--rz-primary) !important;
-            color: white !important;
-        }
-
-            .rz-panel-menu-item-wrapper.rz-state-active .rz-panel-menu-item-text,
-            .rz-panel-menu-item-wrapper.rz-state-active .rz-panel-menu-item-icon {
-                color: white !important;
-            }
-
-    /* Separadores visuales entre secciones principales */
-    .rz-panel-menu > .rz-panel-menu-item-wrapper {
-        border-left: 3px solid transparent;
+    /* ── NAV ITEMS ── */
+    .nav-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 9px 12px;
+        margin: 1px 0;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 13px;
+        color: #9ca3af;
+        transition: all 0.15s ease;
+        text-decoration: none;
+        user-select: none;
+        border: none;
+        background: transparent;
+        width: 100%;
+        text-align: left;
     }
 
-        .rz-panel-menu > .rz-panel-menu-item-wrapper:hover {
-            border-left-color: var(--rz-primary);
+        .nav-item:hover {
+            background: #252840;
+            color: #e2e8f0;
         }
 
-    /* Iconos con mejor espaciado */
-    .rz-panel-menu-item-icon {
-        margin-right: 0.75rem;
-        font-size: 20px;
-    }
+        .nav-item.active {
+            background: linear-gradient(135deg,#6366f1,#8b5cf6);
+            color: #fff !important;
+        }
 
-    /* Texto del menú */
-    .rz-panel-menu-item-text {
+        .nav-item .material-icons {
+            font-size: 18px;
+            color: #4b5563;
+            flex-shrink: 0;
+            transition: color 0.15s;
+        }
+
+        .nav-item:hover .material-icons {
+            color: #ffffff;
+        }
+
+        .nav-item.active .material-icons {
+            color: #fff;
+        }
+
+    .nav-item-chevron {
+        margin-left: auto;
         font-size: 14px;
+        color: #FFFFFF;
+        transition: transform 0.2s;
     }
 
-    /* Submenús con mejor indentación visual */
-    .rz-panel-menu-item-wrapper .rz-panel-menu-item-wrapper {
-        margin-left: 0;
-        border-left: 2px solid var(--rz-base-300);
-    }
-
-    /* Animación suave para expansión de menús */
-    .rz-panel-menu-item-children {
-        transition: all 0.3s ease-in-out;
-    }
-
-    /* Card del body con sombra sutil */
-    .rz-card {
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-        border: 1px solid var(--rz-border-color);
-    }
-
-    /* Header mejorado */
-    .rz-header {
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        z-index: 1000;
-    }
-
-    /* Sidebar con mejor apariencia */
-    .rz-sidebar {
-        box-shadow: 2px 0 8px rgba(0, 0, 0, 0.08);
-        border-right: 1px solid var(--rz-border-color);
-    }
-
-        /* Scroll personalizado para el sidebar */
-        .rz-sidebar::-webkit-scrollbar {
-            width: 6px;
+        .nav-item-chevron.open {
+            transform: rotate(180deg);
         }
 
-        .rz-sidebar::-webkit-scrollbar-track {
-            background: var(--rz-base-100);
+    /* ── CHILDREN ── */
+    .nav-children {
+        margin-left: 16px;
+        border-left: 2px solid #ffffff;
+        padding-left: 4px;
+    }
+
+        .nav-children .nav-item {
+            font-size: 12px;
+            padding: 7px 10px;
+            color: #6b7280;
         }
 
-        .rz-sidebar::-webkit-scrollbar-thumb {
-            background: var(--rz-base-400);
-            border-radius: 3px;
-        }
-
-            .rz-sidebar::-webkit-scrollbar-thumb:hover {
-                background: var(--rz-base-500);
+            .nav-children .nav-item:hover {
+                color: #e2e8f0;
+                background: #1e2035;
             }
+
+            .nav-children .nav-item.active {
+                background: rgba(99,102,241,.2);
+                color: #a5b4fc;
+            }
+
+            .nav-children .nav-item .material-icons {
+                font-size: 16px;
+            }
+
+    /* ── RADZEN OVERRIDES ── */
+    .rz-layout, .rz-body {
+        background: #0f1117 !important;
+    }
+
+    .rz-sidebar {
+        background: #1a1d27 !important;
+        border-right: 1px solid #2d3148 !important;
+    }
+
+    .rz-header {
+        background: #1a1d27 !important;
+    }
+
+    .rz-footer {
+        display: none !important;
+    }
+
+    .rz-card {
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+
+    .rz-sidebar .rz-panel-menu,
+    .rz-sidebar .rz-panel-menu-item-wrapper,
+    .rz-sidebar .rz-panel-menu-item-link {
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+    }
+
+    /* ── SCROLLBAR ── */
+    ::-webkit-scrollbar {
+        width: 5px;
+        height: 5px;
+    }
+
+    ::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background: #2d3148;
+        border-radius: 3px;
+    }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #3d4166;
+        }
 </style>
 
 @code {
     bool sidebarExpanded = true;
+
+    string SidebarStyle => sidebarExpanded
+        ? "width:264px; background:#1a1d27; border-right:1px solid #2d3148; transition:width .2s ease;"
+        : "width:0; overflow:hidden; background:#1a1d27; transition:width .2s ease;";
+
+    Dictionary<string, bool> expanded = new()
+    {
+        ["insumos"] = true,
+        ["capaapp"] = false,
+        ["capabd"] = false,
+        ["nosox"] = false,
+        ["nosoxsd"] = false,
+    };
+
+    void ToggleSidebar() => sidebarExpanded = !sidebarExpanded;
+    void Toggle(string key) => expanded[key] = !expanded[key];
+
+    bool IsActive(string path) =>
+        Nav.Uri.EndsWith(path, StringComparison.OrdinalIgnoreCase) ||
+        Nav.Uri.Contains(path + "/", StringComparison.OrdinalIgnoreCase);
+
+    // Parent nav item (expandable)
+    RenderFragment NavParent(string icon, string label, string key) => __builder =>
+    {
+        __builder.OpenElement(0, "button");
+        __builder.AddAttribute(1, "class", "nav-item");
+        __builder.AddAttribute(2, "onclick", EventCallback.Factory.Create(this, () => Toggle(key)));
+        __builder.AddMarkupContent(3, $"<span class='material-icons'>{icon}</span>");
+        __builder.AddMarkupContent(4, $"<span style='flex:1;'>{label}</span>");
+        __builder.AddMarkupContent(5, $"<span class='nav-item-chevron {(expanded[key] ? "open" : "")}'>expand_more</span>".Replace("expand_more", "▾"));
+        __builder.CloseElement();
+    };
+
+    // Sub-level expandable (inside children)
+    RenderFragment NavParentSub(string icon, string label, string key) => __builder =>
+    {
+        __builder.OpenElement(0, "button");
+        __builder.AddAttribute(1, "class", "nav-item");
+        __builder.AddAttribute(2, "onclick", EventCallback.Factory.Create(this, () => Toggle(key)));
+        __builder.AddMarkupContent(3, $"<span class='material-icons'>{icon}</span>");
+        __builder.AddMarkupContent(4, $"<span style='flex:1;'>{label}</span>");
+        __builder.AddMarkupContent(5, $"<span class='nav-item-chevron {(expanded[key] ? "open" : "")}'>▾</span>");
+        __builder.CloseElement();
+    };
+
+    // Leaf nav item (navigates)
+    RenderFragment NavChild(string icon, string label, string path) => __builder =>
+    {
+        var active = IsActive(path) ? " active" : "";
+        __builder.OpenElement(0, "a");
+        __builder.AddAttribute(1, "class", $"nav-item{active}");
+        __builder.AddAttribute(2, "href", path);
+        __builder.AddMarkupContent(3, $"<span class='material-icons'>{icon}</span>");
+        __builder.AddMarkupContent(4, $"<span>{label}</span>");
+        __builder.CloseElement();
+    };
 }

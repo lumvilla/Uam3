@@ -1,5 +1,4 @@
 ﻿using ClosedXML.Excel;
-using Data.Interfaces.CapaApp.InsertExcelBD;
 using Data.Interfaces.CapaApp.Uam3.IAppInsumosRobot;
 using Data.Interfaces.CapaApp.Uam3.IDataInsumosRobot;
 using Helper;
@@ -15,33 +14,29 @@ public class InsumosRobotService : IAppInsumosRobot
     private readonly ILogger _logger;
     private readonly RutaRobotOptions _rutasRobot;
     private readonly NombreArchivoRobotOptionsCapaAPP _nombresRobot;
-    private bool _robotYaEjecutado = false;
 
-    // Mantenemos el mapa solo para saber el NOMBRE DE LA TABLA.
-    // Ya NO necesitamos el 'typeof(Clase)' porque la estructura la define el Excel.
     private static readonly Dictionary<string, string> _mapaTablas = new()
     {
         { "CrmPortal", "crm_portal" },
-        { "SapErp", "sap_erp" },
-        { "DwhFijo", "dwh_fijo" },
-        { "DwhMovil", "dwh_movil" },
-        { "Fenix", "fenix" },
-        { "OpenUne", "open_une" },
-        { "Orion", "orion" },
-        { "SapGrc", "sap_grc" },
-        { "Siebel", "siebel" },
-        { "The", "the" },
-        { "Iam", "iam" },
-        { "BigData", "big_data" },
-        { "Cbs", "cbs" },
-        { "Cm", "cm" },
-        { "Elk", "elk" },
-        { "Pcrf", "pcrf" }
+        { "SapErp",    "sap_erp"    },
+        { "DwhFijo",   "dwh_fijo"   },
+        { "DwhMovil",  "dwh_movil"  },
+        { "Fenix",     "fenix"      },
+        { "OpenUne",   "open_une"   },
+        { "Orion",     "orion"      },
+        { "SapGrc",    "sap_grc"    },
+        { "Siebel",    "siebel"     },
+        { "The",       "the"        },
+        { "Iam",       "iam"        },
+        { "BigData",   "big_data"   },
+        { "Cbs",       "cbs"        },
+        { "Cm",        "cm"         },
+        { "Elk",       "elk"        },
+        { "Pcrf",      "pcrf"       }
     };
 
-    public InsumosRobotService(IDataInsumosRobot repo,
-        ILogger logger, RutaRobotOptions rutasRobot,
-        NombreArchivoRobotOptionsCapaAPP nombresRobot)
+    public InsumosRobotService(IDataInsumosRobot repo, ILogger logger,
+        RutaRobotOptions rutasRobot, NombreArchivoRobotOptionsCapaAPP nombresRobot)
     {
         _repo = repo;
         _logger = logger;
@@ -49,60 +44,67 @@ public class InsumosRobotService : IAppInsumosRobot
         _nombresRobot = nombresRobot;
     }
 
-
-    // En InsumosRobotService.cs
-
+    // ── Obtener sistemas activos ──
     public Dictionary<string, string> ObtenerConfiguracionAppsActivas()
     {
-        var appsActivas = new Dictionary<string, string>();
-
+        var result = new Dictionary<string, string>();
         var propsRuta = typeof(RutaRobotOptions).GetProperties(BindingFlags.Public | BindingFlags.Instance);
         var propsNombre = typeof(NombreArchivoRobotOptionsCapaAPP).GetProperties(BindingFlags.Public | BindingFlags.Instance);
 
         foreach (var prop in propsRuta)
         {
             var nombreApp = prop.Name;
-
-            // Obtenemos el nombre del archivo configurado
             var nombreArchivo = propsNombre.FirstOrDefault(p => p.Name == nombreApp)?.GetValue(_nombresRobot)?.ToString();
-
-            // 1. Si no tiene configuración o nombre, saltar
             if (string.IsNullOrWhiteSpace(nombreArchivo)) continue;
-
-            // 2. LA CONDICIÓN CLAVE: Si dice "NO", saltar
             if (nombreArchivo.Equals("NO", StringComparison.OrdinalIgnoreCase)) continue;
-
-            // 3. Verificamos si existe mapeo a tabla de BD
-            if (_mapaTablas.TryGetValue(nombreApp, out var nombreTablaBD))
-            {
-                // Agregamos a la lista que verá el usuario
-                // Key: Nombre App (ej: SapErp), Value: Tabla (ej: sap_erp)
-
-                // Opcional: Puedes poner nombres más bonitos manualmente o usar el nombre de la propiedad
-                appsActivas.Add(nombreApp, nombreTablaBD);
-            }
+            if (_mapaTablas.TryGetValue(nombreApp, out var tabla))
+                result.Add(nombreApp, tabla);
         }
-
-        return appsActivas;
+        return result;
     }
 
+    // ── Robot completo ──
     public void EjecutarCargaRobot(Action<string>? onProgress = null)
+        => EjecutarInterno(null, onProgress);
+
+    // ── Robot filtrado por selección ──
+    public void EjecutarCargaRobotFiltrado(HashSet<string> appsSeleccionadas, Action<string>? onProgress = null)
+        => EjecutarInterno(appsSeleccionadas, onProgress);
+
+    // ── Cargue manual desde stream (upload UI) ──
+    public async Task ImportarArchivoManual(Stream stream, string nombreArchivo, string nombreTabla, Action<string>? onProgress = null)
     {
-        // Función local auxiliar para reportar (envía a Consola y al Action si existe)
-        void Reportar(string mensaje)
-        {
-            Console.WriteLine(mensaje); // Mantiene el log del servidor
-            onProgress?.Invoke(mensaje); // Envía el log a la UI
-        }
+        void Log(string msg) { Console.WriteLine(msg); onProgress?.Invoke(msg); }
 
-        if (_robotYaEjecutado)
-        {
-            // Omitir lógica de ReadKey para web, o manejarlo diferente
-            Reportar("El proceso ya fue ejecutado previamente en esta instancia.");
-            // return; // Opcional, dependiendo de tu lógica
-        }
+        Log($"[PROCESANDO] {nombreArchivo}...");
+        Log($"   -> Destino: Tabla '{nombreTabla}'");
 
-        Reportar("--- INICIANDO EJECUCIÓN ROBOT ---");
+        try
+        {
+            // Copiar stream a memoria para ClosedXML
+            using var ms = new MemoryStream();
+            await stream.CopyToAsync(ms);
+            ms.Position = 0;
+
+            ImportarCapaAPPDinamico(ms, nombreArchivo, nombreTabla);
+
+            Log($"[OK] Carga manual finalizada para '{nombreTabla}'.");
+            _logger.EscribirLogRobotCapaApp($"OK: Importado manual {nombreArchivo} -> {nombreTabla}\n");
+        }
+        catch (Exception ex)
+        {
+            Log($"[ERROR] {ex.Message}");
+            _logger.EscribirLogRobotCapaApp($"ERROR manual: {nombreArchivo} -> {ex.Message}\n");
+            throw;
+        }
+    }
+
+    // ── Lógica central robot ──
+    private void EjecutarInterno(HashSet<string>? appsPermitidas, Action<string>? onProgress)
+    {
+        void Log(string msg) { Console.WriteLine(msg); onProgress?.Invoke(msg); }
+
+        Log("--- INICIANDO EJECUCIÓN ROBOT ---");
 
         var propsRuta = typeof(RutaRobotOptions).GetProperties(BindingFlags.Public | BindingFlags.Instance);
         var propsNombre = typeof(NombreArchivoRobotOptionsCapaAPP).GetProperties(BindingFlags.Public | BindingFlags.Instance);
@@ -116,9 +118,15 @@ public class InsumosRobotService : IAppInsumosRobot
             if (string.IsNullOrWhiteSpace(rutaCarpeta) || string.IsNullOrWhiteSpace(nombreArchivo)) continue;
             if (nombreArchivo.Equals("NO", StringComparison.OrdinalIgnoreCase)) continue;
 
+            if (appsPermitidas != null && !appsPermitidas.Contains(nombreApp))
+            {
+                Log($"[OMITIDO] {nombreApp} no fue seleccionado.");
+                continue;
+            }
+
             if (!_mapaTablas.TryGetValue(nombreApp, out var nombreTablaBD))
             {
-                Reportar($"[SKIP] No hay mapeo de tabla para {nombreApp}");
+                Log($"[SKIP] Sin mapeo de tabla para {nombreApp}");
                 continue;
             }
 
@@ -126,135 +134,88 @@ public class InsumosRobotService : IAppInsumosRobot
 
             if (!Directory.Exists(rutaCarpeta) || !File.Exists(archivoPath))
             {
-                Reportar($"[ERROR] Archivo no encontrado: {nombreArchivo}");
+                Log($"[ERROR] Archivo no encontrado: {archivoPath}");
                 _logger.EscribirLog($"No se encontró: {archivoPath}");
                 continue;
             }
 
             try
             {
-                Reportar($"[PROCESANDO] {nombreArchivo}...");
-                Reportar($"   -> Destino: Tabla '{nombreTablaBD}'");
+                Log($"[PROCESANDO] {nombreArchivo}...");
+                Log($"   -> Destino: Tabla '{nombreTablaBD}'");
 
-                // Importar
-                ImportarCapaAPPDinamico(archivoPath, nombreTablaBD);
+                using var fs = File.OpenRead(archivoPath);
+                ImportarCapaAPPDinamico(fs, nombreArchivo, nombreTablaBD);
 
-                Reportar($"[OK] Carga finalizada para {nombreApp}.");
+                Log($"[OK] Carga finalizada para {nombreApp}.");
                 _logger.EscribirLogRobotCapaApp($"OK: Importado {nombreArchivo} -> {nombreTablaBD}\n");
             }
             catch (Exception ex)
             {
-                Reportar($"[FATAL] Error en {nombreApp}: {ex.Message}");
+                Log($"[FATAL] Error en {nombreApp}: {ex.Message}");
                 _logger.EscribirLogRobotCapaApp($"ERROR: {nombreArchivo} -> {ex.Message}\n");
             }
 
-            Reportar("------------------------------------------------");
+            Log("------------------------------------------------");
         }
 
-        _robotYaEjecutado = true;
-        Reportar("--- PROCESO TERMINADO ---");
+        Log("--- PROCESO TERMINADO ---");
     }
 
-    private void ImportarCapaAPPDinamico(string rutaExcel, string nombreTabla)
+    // ── Importación dinámica desde Stream ──
+    private void ImportarCapaAPPDinamico(Stream stream, string nombreArchivo, string nombreTabla)
     {
-        using var wb = new XLWorkbook(rutaExcel);
-        // Intentamos tomar la primera hoja
+        using var wb = new XLWorkbook(stream);
         var ws = wb.Worksheets.First();
+        var firstRow = ws.FirstRowUsed();
+        if (firstRow == null) return;
 
-        var firstRowUsed = ws.FirstRowUsed();
-        if (firstRowUsed == null) return;
-
-        // 1. Obtener y Limpiar Encabezados (Para que sirvan como nombres de columnas SQL)
-        var rawHeaders = firstRowUsed.CellsUsed().Select(c => c.GetString()).ToList();
+        var rawHeaders = firstRow.CellsUsed().Select(c => c.GetString()).ToList();
         var cleanHeaders = new List<string>();
-        var headerMap = new Dictionary<int, string>(); // Indice Excel -> Nombre Columna Limpio
 
-        int colIndex = 0;
+        int colIdx = 0;
         foreach (var header in rawHeaders)
         {
             string clean = LimpiarNombreColumna(header);
-
-            // Evitar duplicados (ej: si hay dos columnas "Fecha", la segunda será "Fecha_1")
             if (cleanHeaders.Contains(clean))
             {
-                int count = 1;
-                while (cleanHeaders.Contains($"{clean}_{count}")) count++;
-                clean = $"{clean}_{count}";
+                int n = 1;
+                while (cleanHeaders.Contains($"{clean}_{n}")) n++;
+                clean = $"{clean}_{n}";
             }
-
             cleanHeaders.Add(clean);
-            headerMap[colIndex] = clean; // Guardamos qué índice del Excel corresponde a qué columna
-            colIndex++;
+            colIdx++;
         }
 
-        // 2. Leer los datos
-        var filasParaInsertar = new List<Dictionary<string, object?>>();
-
-        // Saltamos la cabecera
+        var filas = new List<Dictionary<string, object?>>();
         foreach (var row in ws.RowsUsed().Skip(1))
         {
             var rowData = new Dictionary<string, object?>();
-            bool rowHasData = false;
-
-            // Iteramos solo hasta la cantidad de encabezados que encontramos
-            // Usamos indexación base 0 para nuestra lista cleanHeaders
-            var cells = row.Cells(1, cleanHeaders.Count).ToList();
+            bool hasData = false;
+            var lastCell = row.LastCellUsed()?.Address.ColumnNumber ?? 0;
 
             for (int i = 0; i < cleanHeaders.Count; i++)
             {
-                string colName = cleanHeaders[i];
-
-                // Obtener valor de celda de forma segura
-                // Nota: XLCell índice empieza en 1, nuestras listas en 0. 
-                // Pero row.Cell(i+1) es más seguro.
-                var cell = row.Cell(i + 1);
-
-                var val = cell.GetValue<string>()?.Trim();
-
-                if (string.IsNullOrEmpty(val))
-                {
-                    rowData[colName] = null;
-                }
-                else
-                {
-                    rowData[colName] = val;
-                    rowHasData = true;
-                }
+                var val = (i + 1 <= lastCell)
+                    ? row.Cell(i + 1).GetValue<string>()?.Trim()
+                    : null;
+                if (string.IsNullOrEmpty(val)) { rowData[cleanHeaders[i]] = null; }
+                else { rowData[cleanHeaders[i]] = val; hasData = true; }
             }
-
-            if (rowHasData)
-            {
-                filasParaInsertar.Add(rowData);
-            }
+            if (hasData) filas.Add(rowData);
         }
 
-        if (filasParaInsertar.Any())
-        {
-            // Enviamos al repositorio para crear tabla e insertar
-            _repo.CreateAndBulkInsertDynamic(nombreTabla, Path.GetFileName(rutaExcel), cleanHeaders, filasParaInsertar);
-        }
+        if (filas.Any())
+            _repo.CreateAndBulkInsertDynamic(nombreTabla, nombreArchivo, cleanHeaders, filas);
         else
-        {
-            _logger.EscribirLogRobotCapaApp($"El archivo {rutaExcel} no contiene filas de datos.");
-        }
+            _logger.EscribirLogRobotCapaApp($"El archivo {nombreArchivo} no contiene filas de datos.");
     }
 
-    /// <summary>
-    /// Convierte un encabezado de Excel en un nombre de columna SQL válido y limpio.
-    /// </summary>
     private string LimpiarNombreColumna(string header)
     {
         if (string.IsNullOrWhiteSpace(header)) return "Columna_Sin_Nombre";
-
-        // Reemplazar espacios y caracteres raros por guiones bajos
-        string clean = Regex.Replace(header, @"[^a-zA-Z0-9_]", "_");
-
-        // Eliminar guiones bajos duplicados o al inicio/fin
-        clean = clean.Trim('_');
-
-        // Si empieza con número, agregar prefijo
-        if (char.IsDigit(clean[0])) clean = "C_" + clean;
-
-        return clean;
+        string clean = Regex.Replace(header, @"[^a-zA-Z0-9_]", "_").Trim('_');
+        if (clean.Length > 0 && char.IsDigit(clean[0])) clean = "C_" + clean;
+        return string.IsNullOrEmpty(clean) ? "Columna_Sin_Nombre" : clean;
     }
 }

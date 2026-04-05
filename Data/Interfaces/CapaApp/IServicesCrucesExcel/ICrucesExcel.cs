@@ -17,8 +17,14 @@ public interface ICrucesExcel
     Task<IEnumerable<UsuarioDisableDto>> UsuariosSapGrcDisable();
     Task<IEnumerable<UsuarioDisableDto>> UsuariosIamDisable();
 
+    // Nuevos sistemas
+    Task<IEnumerable<UsuarioDisableDto>> UsuariosCbsDisable();
+    Task<IEnumerable<UsuarioDisableDto>> UsuariosCmDisable();
+    Task<IEnumerable<UsuarioDisableDto>> UsuariosElkDisable();
+    Task<IEnumerable<UsuarioDisableDto>> UsuariosPcrfDisable();
+    Task<IEnumerable<UsuarioDisableDto>> UsuariosBigDataDisable();
 
-    // Nuevo: Métodos públicos para obtener queries (usados por CrucesDisplayService)
+    // Queries existentes
     string GetQueryPortal();
     string GetQueryDA();
     string GetQuerySiebelMovil();
@@ -31,4 +37,10 @@ public interface ICrucesExcel
     string GetQuerySapGrc();
     string GetQueryIam();
 
+    // Queries nuevas
+    string GetQueryCbs();
+    string GetQueryCm();
+    string GetQueryElk();
+    string GetQueryPcrf();
+    string GetQueryBigData();
 }

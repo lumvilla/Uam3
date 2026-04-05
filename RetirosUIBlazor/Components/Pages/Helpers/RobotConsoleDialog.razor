@@ -1,71 +1,217 @@
 ﻿@using Data.Interfaces.CapaApp.Uam3.IAppInsumosRobot
-@using Radzen
 @inject IAppInsumosRobot RobotService
 @inject DialogService DialogService
 @inject IJSRuntime JSRuntime
 
-<RadzenStack Orientation="Orientation.Vertical" Gap="0" Style="height: 100%; overflow: hidden;">
+<style>
+    .rcd-root {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        background: #13151f;
+        border-radius: 8px;
+        overflow: hidden;
+    }
 
-    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="1rem" Style="padding-bottom: 1rem; border-bottom: 1px solid #e0e0e0;">
+    .rcd-header {
+        padding: 14px 20px;
+        border-bottom: 1px solid #2d3148;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-shrink: 0;
+    }
+
+    .rcd-spin {
+        width: 18px;
+        height: 18px;
+        border: 2px solid #2d3148;
+        border-top-color: #6366f1;
+        border-radius: 50%;
+        animation: spin .7s linear infinite;
+        flex-shrink: 0;
+    }
+
+    @@keyframes spin {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    .rcd-status {
+        font-size: 14px;
+        font-weight: 600;
+    }
+
+    .rcd-console {
+        flex: 1;
+        overflow-y: auto;
+        padding: 12px 16px;
+        background: #0f1117;
+        font-family: 'Courier New',monospace;
+        font-size: 12px;
+        line-height: 1.6;
+    }
+
+    .rcd-log {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 4px;
+        padding: 5px 8px;
+        border-radius: 6px;
+    }
+
+        .rcd-log.ok {
+            background: rgba(34,197,94,.06);
+            border-left: 3px solid #22c55e;
+        }
+
+        .rcd-log.error {
+            background: rgba(239,68,68,.06);
+            border-left: 3px solid #ef4444;
+        }
+
+        .rcd-log.process {
+            background: rgba(99,102,241,.06);
+            border-left: 3px solid #6366f1;
+        }
+
+        .rcd-log.skip {
+            border-left: 3px solid #2d3148;
+        }
+
+        .rcd-log.sep {
+            border-left: 3px solid #1e2035;
+        }
+
+    .rcd-log-time {
+        color: #4b5563;
+        font-size: 11px;
+        flex-shrink: 0;
+        margin-top: 1px;
+    }
+
+    .rcd-log-msg {
+        flex: 1;
+    }
+
+    .rcd-log.ok .rcd-log-msg {
+        color: #4ade80;
+    }
+
+    .rcd-log.error .rcd-log-msg {
+        color: #f87171;
+    }
+
+    .rcd-log.process .rcd-log-msg {
+        color: #a5b4fc;
+    }
+
+    .rcd-log.skip .rcd-log-msg {
+        color: #6b7280;
+    }
+
+    .rcd-log.sep .rcd-log-msg {
+        color: #374151;
+    }
+
+    .rcd-footer {
+        padding: 12px 20px;
+        border-top: 1px solid #2d3148;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-shrink: 0;
+    }
+
+    .rcd-counter {
+        font-size: 12px;
+        color: #6b7280;
+    }
+
+    .rcd-close {
+        background: linear-gradient(135deg,#6366f1,#8b5cf6);
+        color: #fff;
+        border: none;
+        padding: 9px 20px;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: opacity .15s;
+    }
+
+        .rcd-close:hover:not(:disabled) {
+            opacity: .85;
+        }
+
+        .rcd-close:disabled {
+            opacity: .35;
+            cursor: not-allowed;
+            background: #252840;
+            color: #6b7280;
+        }
+</style>
+
+<div class="rcd-root">
+    <!-- HEADER -->
+    <div class="rcd-header">
         @if (estaEjecutando)
         {
-            <RadzenProgressBarCircular ShowValue="false" Mode="Radzen.ProgressBarMode.Indeterminate" Size="ProgressBarCircularSize.Small" />
-           
-            <RadzenText TextStyle="TextStyle.Subtitle1" TagName="TagName.H3" Style="margin: 0; color: #004e87;">
-                Ejecutando proceso de carga...
-            </RadzenText>
+            <div class="rcd-spin"></div>
+            <div class="rcd-status" style="color:#a5b4fc;">Ejecutando proceso de carga...</div>
         }
         else
         {
-            <RadzenIcon Icon="check_circle" IconColor="@Colors.Success" />
-            <RadzenText TextStyle="TextStyle.Subtitle1" TagName="TagName.H3" Style="margin: 0; color: green;">
-                Proceso Finalizado
-            </RadzenText>
+            <span style="font-size:18px;">✅</span>
+            <div class="rcd-status" style="color:#4ade80;">Proceso Finalizado</div>
         }
-    </RadzenStack>
-
-    <div id="scrollContainer" style="flex: 1; overflow-y: auto; padding: 1rem; background-color: #f9f9f9; border-radius: 4px;">
-        <RadzenStack Orientation="Orientation.Vertical" Gap="0.5rem">
-            @foreach (var item in logsProcesados)
-            {
-                <RadzenCard Variant="Variant.Flat" Style="@ObtenerEstiloTarjeta(item.Tipo)">
-                    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Start" Gap="0.5rem">
-                        <RadzenIcon Icon="@item.Icono" IconColor="@item.Color" Style="font-size: 1.2rem; margin-top: 2px;" />
-                        <RadzenStack Gap="0">
-                            <RadzenText TextStyle="TextStyle.Caption" Style="color: #888;">@item.Hora</RadzenText>
-                            <RadzenText TextStyle="TextStyle.Body2" Style="@($"color: {item.ColorTexto}; font-weight: 500;")">
-                                @item.Mensaje
-                            </RadzenText>
-                        </RadzenStack>
-                    </RadzenStack>
-                </RadzenCard>
-            }
-        </RadzenStack>
+        <div style="margin-left:auto;font-size:11px;color:#4b5563;">
+            @countOk OK · @countError errores · @countSkip omitidos
+        </div>
     </div>
 
-    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" Style="padding-top: 1rem; border-top: 1px solid #e0e0e0;">
-        <RadzenButton Text="@(estaEjecutando ? "Procesando..." : "Cerrar Ventana")"
-                      Click="@(() => DialogService.Close(true))"
-                      ButtonStyle="@(estaEjecutando ? ButtonStyle.Base : ButtonStyle.Primary)"
-                      Disabled="@estaEjecutando" />
-    </RadzenStack>
+    <!-- CONSOLE LOG -->
+    <div class="rcd-console" id="rcdScroll">
+        @foreach (var item in logs)
+        {
+            <div class="rcd-log @item.Clase">
+                <span class="rcd-log-time">@item.Hora</span>
+                <span class="rcd-log-msg">@item.Mensaje</span>
+            </div>
+        }
+        @if (estaEjecutando)
+        {
+            <div style="display:flex;align-items:center;gap:6px;color:#4b5563;font-size:11px;padding:4px 8px;">
+                <div class="rcd-spin" style="width:12px;height:12px;border-width:1px;"></div>
+                procesando...
+            </div>
+        }
+    </div>
 
-</RadzenStack>
+    <!-- FOOTER -->
+    <div class="rcd-footer">
+        <div class="rcd-counter">@logs.Count mensajes</div>
+        <button class="rcd-close" disabled="@estaEjecutando"
+                @onclick="@(() => DialogService.Close(true))">
+            @(estaEjecutando ? "Procesando..." : "Cerrar Ventana")
+        </button>
+    </div>
+</div>
 
 @code {
-    // Clase interna para dar formato
+    [Parameter] public HashSet<string> AppsSeleccionadas { get; set; } = new();
+
     private class LogItem
     {
         public string Mensaje { get; set; } = "";
         public string Hora { get; set; } = "";
-        public string Icono { get; set; } = "info";
-        public string Color { get; set; } = Colors.Info;
-        public string ColorTexto { get; set; } = "#333";
-        public string Tipo { get; set; } = "Info"; // Info, Error, Success
+        public string Clase { get; set; } = "";
     }
 
-    private List<LogItem> logsProcesados = new List<LogItem>();
+    private List<LogItem> logs = new();
     private bool estaEjecutando = true;
+    private int countOk = 0, countError = 0, countSkip = 0;
 
     protected override async Task OnInitializedAsync()
     {
@@ -73,14 +219,14 @@
         {
             try
             {
-                RobotService.EjecutarCargaRobot((mensajeRaw) =>
-                {
-                    InvokeAsync(() => ProcesarMensaje(mensajeRaw));
-                });
+                if (AppsSeleccionadas.Count > 0)
+                    RobotService.EjecutarCargaRobotFiltrado(AppsSeleccionadas, AgregarLog);
+                else
+                    RobotService.EjecutarCargaRobot(AgregarLog);
             }
             catch (Exception ex)
             {
-                InvokeAsync(() => ProcesarMensaje($"[FATAL] {ex.Message}"));
+                InvokeAsync(() => AgregarLog($"[FATAL] {ex.Message}"));
             }
             finally
             {
@@ -90,56 +236,36 @@
         });
     }
 
-    // Lógica para embellecer el mensaje según palabras clave
-    private void ProcesarMensaje(string mensaje)
+    private void AgregarLog(string mensaje)
     {
-        var item = new LogItem
+        var clase = mensaje switch
+        {
+            var m when m.Contains("[OK]") => "ok",
+            var m when m.Contains("[ERROR]") => "error",
+            var m when m.Contains("[FATAL]") => "error",
+            var m when m.Contains("[PROCESANDO]") => "process",
+            var m when m.Contains("[OMITIDO]") => "skip",
+            var m when m.Contains("[SKIP]") => "skip",
+            var m when m.Contains("---") => "sep",
+            _ => ""
+        };
+
+        if (clase == "ok") countOk++;
+        if (clase == "error") countError++;
+        if (clase == "skip") countSkip++;
+
+        logs.Add(new LogItem
         {
             Mensaje = mensaje,
-            Hora = DateTime.Now.ToString("hh:mm:ss tt")
-        };
+            Hora = DateTime.Now.ToString("HH:mm:ss"),
+            Clase = clase
+        });
 
-        if (mensaje.Contains("ERROR") || mensaje.Contains("FATAL") || mensaje.Contains("Exception"))
+        InvokeAsync(async () =>
         {
-            item.Icono = "error";
-            item.Color = Colors.Danger;
-            item.ColorTexto = "#d32f2f"; // Rojo oscuro
-            item.Tipo = "Error";
-        }
-        else if (mensaje.Contains("OK") || mensaje.Contains("Finalizado") || mensaje.Contains("Exito"))
-        {
-            item.Icono = "check_circle";
-            item.Color = Colors.Success;
-            item.ColorTexto = "#1b5e20"; // Verde oscuro
-            item.Tipo = "Success";
-        }
-        else if (mensaje.Contains("PROCESANDO") || mensaje.Contains("INICIANDO"))
-        {
-            item.Icono = "autorenew"; // Icono de girar
-            item.Color = Colors.Primary;
-            item.Tipo = "Proceso";
-        }
-        else if (mensaje.Contains("SKIP") || mensaje.Contains("---"))
-        {
-            item.Icono = "horizontal_rule";
-            item.Color = Colors.InfoLight;
-            item.ColorTexto = "#999";
-        }
-
-        logsProcesados.Add(item);
-        StateHasChanged();
-
-        // Auto-scroll simple con JS (opcional, si tienes JS interop)
-        JSRuntime.InvokeVoidAsync("eval", "var elem = document.getElementById('scrollContainer'); elem.scrollTop = elem.scrollHeight");
-    }
-
-    private string ObtenerEstiloTarjeta(string tipo)
-    {
-        return tipo switch
-        {
-            "Error" => "background-color: #fdecea; border-left: 4px solid #d32f2f; padding: 0.5rem;",
-            "Success" => "background-color: #e8f5e9; border-left: 4px solid #2e7d32; padding: 0.5rem;",
-            _ => "background-color: white; border-bottom: 1px solid #f0f0f0; padding: 0.5rem;"
-        };
+            StateHasChanged();
+            await JSRuntime.InvokeVoidAsync("eval",
+                "var e=document.getElementById('rcdScroll');if(e)e.scrollTop=e.scrollHeight;");
+        });
     }
 }
