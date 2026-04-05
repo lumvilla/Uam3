@@ -83,6 +83,21 @@
 
                         @* IAM *@
                         @RenderAccordionItem("iam", retirosIam, "IAM", "groups")
+
+                        @* CBS *@
+                        @RenderAccordionItem("cbs", retirosCbs, "CBS", "storage")
+
+                        @* CM *@
+                        @RenderAccordionItem("cm", retirosCm, "CM", "settings")
+
+                        @* ELK *@
+                        @RenderAccordionItem("elk", retirosElk, "ELK", "analytics")
+
+                        @* PCRF *@
+                        @RenderAccordionItem("pcrf", retirosPcrf, "PCRF", "hub")
+
+                        @* Big Data *@
+                        @RenderAccordionItem("bigdata", retirosBigData, "Big Data", "cloud")
                     </Items>
                 </RadzenAccordion>
             </div>
@@ -111,10 +126,15 @@
     private IEnumerable<RetirosUserApp> retirosSapErp = Enumerable.Empty<RetirosUserApp>();
     private IEnumerable<RetirosUserApp> retirosSapGrc = Enumerable.Empty<RetirosUserApp>();
     private IEnumerable<RetirosUserApp> retirosIam = Enumerable.Empty<RetirosUserApp>();
+    private IEnumerable<RetirosUserApp> retirosCbs = Enumerable.Empty<RetirosUserApp>();
+    private IEnumerable<RetirosUserApp> retirosCm = Enumerable.Empty<RetirosUserApp>();
+    private IEnumerable<RetirosUserApp> retirosElk = Enumerable.Empty<RetirosUserApp>();
+    private IEnumerable<RetirosUserApp> retirosPcrf = Enumerable.Empty<RetirosUserApp>();
+    private IEnumerable<RetirosUserApp> retirosBigData = Enumerable.Empty<RetirosUserApp>();
 
     protected override void OnInitialized()
     {
-        var apps = new[] { "portal", "da", "siebelmovil", "siebelfijo", "fenix", "open", "dwhmovil", "dwhfijo", "saperp", "sapgrc", "iam" };
+        var apps = new[] { "portal", "da", "siebelmovil", "siebelfijo", "fenix", "open", "dwhmovil", "dwhfijo", "saperp", "sapgrc", "iam", "cbs", "cm", "elk", "pcrf", "bigdata" };
         foreach (var a in apps)
         {
             if (!selectedTipoCruce.ContainsKey(a)) selectedTipoCruce[a] = "AMBOS";
@@ -188,6 +208,11 @@
             "saperp" => retirosSapErp,
             "sapgrc" => retirosSapGrc,
             "iam" => retirosIam,
+            "cbs" => retirosCbs,
+            "cm" => retirosCm,
+            "elk" => retirosElk,
+            "pcrf" => retirosPcrf,
+            "bigdata" => retirosBigData,
             _ => Enumerable.Empty<RetirosUserApp>()
         };
     }
@@ -218,10 +243,10 @@
                     <RadzenLabel Text="Tipo Cruce:" Style="margin-left: 1rem;" />
                     <RadzenDropDown @bind-Value="selectedTipoCruce[app]"
                                     Data="@(new[] {
-                                                                new { Key = "AMBOS", Text = "Ambos" },
-                                                                new { Key = "LOGIN", Text = "Login" },
-                                                                new { Key = "CEDULA", Text = "Cédula" }
-                                                            })"
+                                                                                        new { Key = "AMBOS", Text = "Ambos" },
+                                                                                        new { Key = "LOGIN", Text = "Login" },
+                                                                                        new { Key = "CEDULA", Text = "Cédula" }
+                                                                                    })"
                         TextProperty="Text"
                         ValueProperty="Key"
                         Placeholder="Seleccione tipo"
@@ -306,6 +331,11 @@
                 retirosSapErp = todosLosDatos.Where(x => x.App?.Equals("saperp", StringComparison.OrdinalIgnoreCase) == true);
                 retirosSapGrc = todosLosDatos.Where(x => x.App?.Equals("sapgrc", StringComparison.OrdinalIgnoreCase) == true);
                 retirosIam = todosLosDatos.Where(x => x.App?.Equals("iam", StringComparison.OrdinalIgnoreCase) == true);
+                retirosCbs = todosLosDatos.Where(x => x.App?.Equals("cbs", StringComparison.OrdinalIgnoreCase) == true);
+                retirosCm = todosLosDatos.Where(x => x.App?.Equals("cm", StringComparison.OrdinalIgnoreCase) == true);
+                retirosElk = todosLosDatos.Where(x => x.App?.Equals("elk", StringComparison.OrdinalIgnoreCase) == true);
+                retirosPcrf = todosLosDatos.Where(x => x.App?.Equals("pcrf", StringComparison.OrdinalIgnoreCase) == true);
+                retirosBigData = todosLosDatos.Where(x => x.App?.Equals("bigdata", StringComparison.OrdinalIgnoreCase) == true);
 
                 totalRegistros = todosLosDatos.Count();
                 hayDatos = true;
@@ -432,6 +462,11 @@
             "saperp" => "SAP ERP",
             "sapgrc" => "SAP GRC",
             "iam" => "IAM",
+            "cbs" => "CBS",
+            "cm" => "CM",
+            "elk" => "ELK",
+            "pcrf" => "PCRF",
+            "bigdata" => "Big Data",
             _ => app
         };
     }
@@ -479,6 +514,21 @@
                     case "iam":
                         retirosIam = todosLosDatos.Where(x => x.App?.Equals("iam", StringComparison.OrdinalIgnoreCase) == true);
                         break;
+                    case "cbs":
+                        retirosCbs = todosLosDatos.Where(x => x.App?.Equals("cbs", StringComparison.OrdinalIgnoreCase) == true);
+                        break;
+                    case "cm":
+                        retirosCm = todosLosDatos.Where(x => x.App?.Equals("cm", StringComparison.OrdinalIgnoreCase) == true);
+                        break;
+                    case "elk":
+                        retirosElk = todosLosDatos.Where(x => x.App?.Equals("elk", StringComparison.OrdinalIgnoreCase) == true);
+                        break;
+                    case "pcrf":
+                        retirosPcrf = todosLosDatos.Where(x => x.App?.Equals("pcrf", StringComparison.OrdinalIgnoreCase) == true);
+                        break;
+                    case "bigdata":
+                        retirosBigData = todosLosDatos.Where(x => x.App?.Equals("bigdata", StringComparison.OrdinalIgnoreCase) == true);
+                        break;
                 }
 
                 totalRegistros = todosLosDatos.Count();
@@ -518,5 +568,10 @@
         retirosSapErp = Enumerable.Empty<RetirosUserApp>();
         retirosSapGrc = Enumerable.Empty<RetirosUserApp>();
         retirosIam = Enumerable.Empty<RetirosUserApp>();
+        retirosCbs = Enumerable.Empty<RetirosUserApp>();
+        retirosCm = Enumerable.Empty<RetirosUserApp>();
+        retirosElk = Enumerable.Empty<RetirosUserApp>();
+        retirosPcrf = Enumerable.Empty<RetirosUserApp>();
+        retirosBigData = Enumerable.Empty<RetirosUserApp>();
     }
 }

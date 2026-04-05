@@ -848,5 +848,272 @@ public class CrucesUserDisable : ICrucesExcel
                                               AND (i.Login_ID  <> c.login OR i.Login_ID  IS NULL OR c.login IS NULL)
                                             ";
 
+    public async Task<IEnumerable<UsuarioDisableDto>> UsuariosCbsDisable()
+    {
+        try
+        {
+            using var conexion = _factory.CreateConnection();
+            var sql = $@"
+            WITH datos AS ( {GetQueryCbs()} )
+            SELECT *
+            FROM (
+                SELECT d.*,
+                       ROW_NUMBER() OVER (
+                           PARTITION BY LoginConsolidado, LoginApp
+                           ORDER BY FechaRetiro DESC
+                       ) AS rn
+                FROM datos d
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM retiro_app_temp t
+                    WHERE t.app = 'cbs' COLLATE NOCASE
+                    AND t.cedula_consolidado = d.CedulaConsolidado
+                    AND COALESCE(t.login_app,'') = COALESCE(d.LoginApp,'')
+                    AND COALESCE(t.tipo_cruce,'') = COALESCE(d.TipoCruce,'')
+                    AND DATE(t.fecha_ejecucion) = DATE('now')
+                )
+            ) x WHERE rn = 1";
+            return (await conexion.QueryAsync<UsuarioDisableDto>(sql)).ToList();
+        }
+        catch (Exception) { throw; }
+    }
+
+    public string GetQueryCbs() => @"
+    SELECT
+        'cbs' AS App,
+        'LOGIN' AS TipoCruce,
+        COALESCE(s.CEDULA, da.identificacion, 'Sin cedula') AS CedulaApp,
+        c.cedula         AS CedulaConsolidado,
+        s.STAFF_NO       AS LoginApp,
+        c.Login          AS LoginConsolidado,
+        c.nombre         AS NombreConsolidado,
+        c.estado_entidad AS EstadoApp,
+        c.estado_entidad AS EstadoConsolidado,
+        c.fecha_retiro   AS FechaRetiro
+    FROM consolidado c
+    INNER JOIN cbs s
+        ON CAST(s.STAFF_NO AS TEXT) = c.login COLLATE NOCASE
+    LEFT JOIN directorio_activo da
+        ON da.login = c.login COLLATE NOCASE
+    WHERE CAST(s.STATUS AS TEXT) = '1'
+      AND c.estado_entidad <> 'Habilitado' COLLATE NOCASE
+";
+
+    // ──────────────────────────────────────────────────────────────────
+    // CM — cruce por login, STATUS = 'HABILITADO' es activo
+    // ──────────────────────────────────────────────────────────────────
+
+    public async Task<IEnumerable<UsuarioDisableDto>> UsuariosCmDisable()
+    {
+        try
+        {
+            using var conexion = _factory.CreateConnection();
+            var sql = $@"
+            WITH datos AS ( {GetQueryCm()} )
+            SELECT *
+            FROM (
+                SELECT d.*,
+                       ROW_NUMBER() OVER (
+                           PARTITION BY LoginConsolidado, LoginApp
+                           ORDER BY FechaRetiro DESC
+                       ) AS rn
+                FROM datos d
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM retiro_app_temp t
+                    WHERE t.app = 'cm' COLLATE NOCASE
+                    AND t.cedula_consolidado = d.CedulaConsolidado
+                    AND COALESCE(t.login_app,'') = COALESCE(d.LoginApp,'')
+                    AND COALESCE(t.tipo_cruce,'') = COALESCE(d.TipoCruce,'')
+                    AND DATE(t.fecha_ejecucion) = DATE('now')
+                )
+            ) x WHERE rn = 1";
+            return (await conexion.QueryAsync<UsuarioDisableDto>(sql)).ToList();
+        }
+        catch (Exception) { throw; }
+    }
+
+    public string GetQueryCm() => @"
+    SELECT
+        'cm' AS App,
+        'LOGIN' AS TipoCruce,
+        COALESCE(CAST(m.CEDULA AS TEXT), da.identificacion, 'Sin cedula') AS CedulaApp,
+        c.cedula         AS CedulaConsolidado,
+        m.USERNAME       AS LoginApp,
+        c.Login          AS LoginConsolidado,
+        c.nombre         AS NombreConsolidado,
+        c.estado_entidad AS EstadoApp,
+        c.estado_entidad AS EstadoConsolidado,
+        c.fecha_retiro   AS FechaRetiro
+    FROM consolidado c
+    INNER JOIN cm m
+        ON m.USERNAME = c.login COLLATE NOCASE
+    LEFT JOIN directorio_activo da
+        ON da.login = c.login COLLATE NOCASE
+    WHERE m.STATUS = 'HABILITADO' COLLATE NOCASE
+      AND c.estado_entidad <> 'Habilitado' COLLATE NOCASE
+";
+
+    // ──────────────────────────────────────────────────────────────────
+    // ELK — cruce por login, ESTADO = 'Habilitado' es activo
+    // Tiene cédula propia en la mayoría de casos
+    // ──────────────────────────────────────────────────────────────────
+
+    public async Task<IEnumerable<UsuarioDisableDto>> UsuariosElkDisable()
+    {
+        try
+        {
+            using var conexion = _factory.CreateConnection();
+            var sql = $@"
+            WITH datos AS ( {GetQueryElk()} )
+            SELECT *
+            FROM (
+                SELECT d.*,
+                       ROW_NUMBER() OVER (
+                           PARTITION BY LoginConsolidado, LoginApp
+                           ORDER BY FechaRetiro DESC
+                       ) AS rn
+                FROM datos d
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM retiro_app_temp t
+                    WHERE t.app = 'elk' COLLATE NOCASE
+                    AND t.cedula_consolidado = d.CedulaConsolidado
+                    AND COALESCE(t.login_app,'') = COALESCE(d.LoginApp,'')
+                    AND COALESCE(t.tipo_cruce,'') = COALESCE(d.TipoCruce,'')
+                    AND DATE(t.fecha_ejecucion) = DATE('now')
+                )
+            ) x WHERE rn = 1";
+            return (await conexion.QueryAsync<UsuarioDisableDto>(sql)).ToList();
+        }
+        catch (Exception) { throw; }
+    }
+
+    public string GetQueryElk() => @"
+    SELECT
+        'elk' AS App,
+        'LOGIN' AS TipoCruce,
+        COALESCE(CAST(e.CEDULA AS TEXT), da.identificacion, 'Sin cedula') AS CedulaApp,
+        c.cedula         AS CedulaConsolidado,
+        e.LOGIN          AS LoginApp,
+        c.Login          AS LoginConsolidado,
+        c.nombre         AS NombreConsolidado,
+        c.estado_entidad AS EstadoApp,
+        c.estado_entidad AS EstadoConsolidado,
+        c.fecha_retiro   AS FechaRetiro
+    FROM consolidado c
+    INNER JOIN elk e
+        ON e.LOGIN = c.login COLLATE NOCASE
+    LEFT JOIN directorio_activo da
+        ON da.login = c.login COLLATE NOCASE
+    WHERE e.ESTADO = 'Habilitado' COLLATE NOCASE
+      AND c.estado_entidad <> 'Habilitado' COLLATE NOCASE
+";
+
+    // ──────────────────────────────────────────────────────────────────
+    // PCRF — cruce por login, sin filtro de estado
+    // Estado viene del consolidado
+    // ──────────────────────────────────────────────────────────────────
+
+    public async Task<IEnumerable<UsuarioDisableDto>> UsuariosPcrfDisable()
+    {
+        try
+        {
+            using var conexion = _factory.CreateConnection();
+            var sql = $@"
+            WITH datos AS ( {GetQueryPcrf()} )
+            SELECT *
+            FROM (
+                SELECT d.*,
+                       ROW_NUMBER() OVER (
+                           PARTITION BY LoginConsolidado, LoginApp
+                           ORDER BY FechaRetiro DESC
+                       ) AS rn
+                FROM datos d
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM retiro_app_temp t
+                    WHERE t.app = 'pcrf' COLLATE NOCASE
+                    AND t.cedula_consolidado = d.CedulaConsolidado
+                    AND COALESCE(t.login_app,'') = COALESCE(d.LoginApp,'')
+                    AND COALESCE(t.tipo_cruce,'') = COALESCE(d.TipoCruce,'')
+                    AND DATE(t.fecha_ejecucion) = DATE('now')
+                )
+            ) x WHERE rn = 1";
+            return (await conexion.QueryAsync<UsuarioDisableDto>(sql)).ToList();
+        }
+        catch (Exception) { throw; }
+    }
+
+    public string GetQueryPcrf() => @"
+    SELECT
+        'pcrf' AS App,
+        'LOGIN' AS TipoCruce,
+        COALESCE(da.identificacion, 'Sin cedula') AS CedulaApp,
+        c.cedula         AS CedulaConsolidado,
+        p.USUARIOS       AS LoginApp,
+        c.Login          AS LoginConsolidado,
+        c.nombre         AS NombreConsolidado,
+        c.estado_entidad AS EstadoApp,
+        c.estado_entidad AS EstadoConsolidado,
+        c.fecha_retiro   AS FechaRetiro
+    FROM consolidado c
+    INNER JOIN pcrf p
+        ON p.USUARIOS = c.login COLLATE NOCASE
+    LEFT JOIN directorio_activo da
+        ON da.login = c.login COLLATE NOCASE
+    WHERE c.estado_entidad <> 'Habilitado' COLLATE NOCASE
+";
+
+    // ──────────────────────────────────────────────────────────────────
+    // BIGDATA — cruce por login, sin filtro de estado
+    // Estado viene del consolidado
+    // ──────────────────────────────────────────────────────────────────
+
+    public async Task<IEnumerable<UsuarioDisableDto>> UsuariosBigDataDisable()
+    {
+        try
+        {
+            using var conexion = _factory.CreateConnection();
+            var sql = $@"
+            WITH datos AS ( {GetQueryBigData()} )
+            SELECT *
+            FROM (
+                SELECT d.*,
+                       ROW_NUMBER() OVER (
+                           PARTITION BY LoginConsolidado, LoginApp
+                           ORDER BY FechaRetiro DESC
+                       ) AS rn
+                FROM datos d
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM retiro_app_temp t
+                    WHERE t.app = 'bigdata' COLLATE NOCASE
+                    AND t.cedula_consolidado = d.CedulaConsolidado
+                    AND COALESCE(t.login_app,'') = COALESCE(d.LoginApp,'')
+                    AND COALESCE(t.tipo_cruce,'') = COALESCE(d.TipoCruce,'')
+                    AND DATE(t.fecha_ejecucion) = DATE('now')
+                )
+            ) x WHERE rn = 1";
+            return (await conexion.QueryAsync<UsuarioDisableDto>(sql)).ToList();
+        }
+        catch (Exception) { throw; }
+    }
+
+    public string GetQueryBigData() => @"
+    SELECT
+        'bigdata' AS App,
+        'LOGIN' AS TipoCruce,
+        COALESCE(CAST(b.CEDULA AS TEXT), da.identificacion, 'Sin cedula') AS CedulaApp,
+        c.cedula         AS CedulaConsolidado,
+        b.LOGIN          AS LoginApp,
+        c.Login          AS LoginConsolidado,
+        c.nombre         AS NombreConsolidado,
+        c.estado_entidad AS EstadoApp,
+        c.estado_entidad AS EstadoConsolidado,
+        c.fecha_retiro   AS FechaRetiro
+    FROM consolidado c
+    INNER JOIN big_data b
+        ON b.LOGIN = c.login COLLATE NOCASE
+    LEFT JOIN directorio_activo da
+        ON da.login = c.login COLLATE NOCASE
+    WHERE c.estado_entidad <> 'Habilitado' COLLATE NOCASE
+";
+
     #endregion
 }

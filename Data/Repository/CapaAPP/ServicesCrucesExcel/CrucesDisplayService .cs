@@ -38,7 +38,6 @@ public class CrucesDisplayService : ICrucesDisplayService
         {
             var fechaHoy = DateTime.Now.ToString("yyyy-MM-dd");
 
-            // Nota: ahora la comprobacion incluye login_app y tipo_cruce para no "fusionar" login vs cedula
             var sqlInsert = @"
                 INSERT INTO retiro_app_temp (
                     fecha_ejecucion, app, cedula_app, cedula_consolidado, login_consolidado, login_app, 
@@ -71,15 +70,12 @@ public class CrucesDisplayService : ICrucesDisplayService
                 r.TipoCruce
             });
 
-            int filas = await connection.ExecuteAsync(sqlInsert, parametros, transaction);
-
+            await connection.ExecuteAsync(sqlInsert, parametros, transaction);
             transaction.Commit();
-            //_logger.LogInformation($"Proceso Temp finalizado. Se insertaron {filas} registros nuevos.");
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             transaction.Rollback();
-            //_logger.LogError($"Error insertando en Temp: {ex.Message}");
             throw;
         }
     }
@@ -99,9 +95,8 @@ public class CrucesDisplayService : ICrucesDisplayService
             var registros = await conexion.QueryAsync<string>(sql);
             return new HashSet<string>(registros);
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            //_logger.LogError($"Error obteniendo registros procesados: {ex.Message}");
             return new HashSet<string>();
         }
     }
@@ -112,11 +107,7 @@ public class CrucesDisplayService : ICrucesDisplayService
         {
             var usuarios = await ObtenerUsuariosPorAppYTipo(app, tipoCruce, cantidad);
 
-            if (!usuarios.Any())
-            {
-                //_logger.LogWarning($"No hay usuarios para procesar en {app} con tipo {tipoCruce}");
-                return false;
-            }
+            if (!usuarios.Any()) return false;
 
             var retirosUserApps = usuarios.Select(u => new RetirosUserApp
             {
@@ -134,12 +125,10 @@ public class CrucesDisplayService : ICrucesDisplayService
             });
 
             await GuardarTempRetirosApp(retirosUserApps);
-
             return true;
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            //_logger.LogError($"Error procesando usuarios seleccionados: {ex.Message}");
             throw;
         }
     }
@@ -169,30 +158,32 @@ public class CrucesDisplayService : ICrucesDisplayService
             "saperp" => _crucesExcel.GetQuerySapErp(),
             "sapgrc" => _crucesExcel.GetQuerySapGrc(),
             "iam" => _crucesExcel.GetQueryIam(),
-            _ => throw new ArgumentException($"Aplicación no valida: {app}")
+            // ── Nuevos sistemas ──
+            "cbs" => _crucesExcel.GetQueryCbs(),
+            "cm" => _crucesExcel.GetQueryCm(),
+            "elk" => _crucesExcel.GetQueryElk(),
+            "pcrf" => _crucesExcel.GetQueryPcrf(),
+            "bigdata" => _crucesExcel.GetQueryBigData(),
+            _ => throw new ArgumentException($"Aplicación no válida: {app}")
         };
 
         var sqlFinal = $@"
-                            WITH UsuariosApp AS (
-                                {queryBase}
-                            )
-                            SELECT * FROM UsuariosApp u
-                            WHERE NOT EXISTS (
-                                SELECT 1 FROM retiro_app_temp t
-                                WHERE t.app = '{app}' COLLATE NOCASE
-                                AND t.cedula_consolidado = u.CedulaConsolidado
-                                AND COALESCE(t.login_app, '') = COALESCE(u.LoginApp, '')
-                                AND COALESCE(t.tipo_cruce, '') = COALESCE(u.TipoCruce, '')
-                                AND DATE(t.fecha_ejecucion) = DATE('now')
-                            )
-                            {whereClause}
-                            ORDER BY u.FechaRetiro DESC
-                            LIMIT @Cantidad";
+            WITH UsuariosApp AS (
+                {queryBase}
+            )
+            SELECT * FROM UsuariosApp u
+            WHERE NOT EXISTS (
+                SELECT 1 FROM retiro_app_temp t
+                WHERE t.app = '{app}' COLLATE NOCASE
+                AND t.cedula_consolidado = u.CedulaConsolidado
+                AND COALESCE(t.login_app, '') = COALESCE(u.LoginApp, '')
+                AND COALESCE(t.tipo_cruce, '') = COALESCE(u.TipoCruce, '')
+                AND DATE(t.fecha_ejecucion) = DATE('now')
+            )
+            {whereClause}
+            ORDER BY u.FechaRetiro DESC
+            LIMIT @Cantidad";
 
         return await conexion.QueryAsync<UsuarioDisableDto>(sqlFinal, new { Cantidad = cantidad });
     }
-
-    // Ejemplo: ajuste en UsuariosSiebelMovilDisable para no eliminar filas con ROW_NUMBER innecesario
-    
-
 }

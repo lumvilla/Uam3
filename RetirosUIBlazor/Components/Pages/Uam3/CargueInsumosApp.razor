@@ -1,8 +1,8 @@
 ﻿@page "/uam3/cargue-insumos-app"
 @using Data.Interfaces.CapaApp.InsertExcelBD
 @using Data.Interfaces.CapaApp.Uam3.IAppInsumosRobot
-@using System.Dynamic
 @using Data.Interfaces.CapaApp.Uam3.IDataInsumosRobot
+@using Microsoft.AspNetCore.Components.Forms
 @using RetirosUIBlazor.Components.Pages.Helpers
 @inject IAppInsumosRobot RobotService
 @inject IDataInsumosRobot DatosRepo
@@ -11,183 +11,963 @@
 
 <PageTitle>Cargue Insumos Aplicaciones</PageTitle>
 
-<RadzenStack Orientation="Orientation.Vertical" Gap="1rem">
-    <RadzenText Text="Gestion de Insumos Robot (Aplicaciones)" TextStyle="TextStyle.H4" />
+<style>
+    .ci-title {
+        font-size: 22px;
+        font-weight: 800;
+        color: #fff;
+        margin-bottom: 4px;
+    }
 
-    <RadzenCard Variant="Variant.Outlined" Class="rz-background-color-warning-lighter rz-border-warning">
-        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Start" Gap="0.5rem">
-            <RadzenIcon Icon="warning" IconColor="@Colors.Warning" />
-            <RadzenStack Gap="0">
-                <RadzenText TextStyle="TextStyle.Subtitle2" TagName="TagName.H3" Text="Importante: Rutas de Archivos" />
-                <RadzenText TextStyle="TextStyle.Body2">
-                    Recuerde que para cargar la informacion, los archivos Excel deben estar ubicados previamente en las carpetas configuradas en el servidor.
-                    Este proceso leerá los archivos, creara las tablas dinámicamente y cargara la información.
-                </RadzenText>
-            </RadzenStack>              
-        </RadzenStack>
-    </RadzenCard>
+    .ci-breadcrumb {
+        font-size: 12px;
+        color: #6b7280;
+        margin-bottom: 20px;
+    }
 
-    <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem">
-        <RadzenButton Text="Ejecutar Carga Robot"
-                      Icon="smart_toy"
-                      ButtonStyle="ButtonStyle.Primary"
-                      Click="@EjecutarRobot"
-                      IsBusy="@isExecuting"
-                      BusyText="Procesando archivos..." />
+    /* TABS */
+    .ci-tabs {
+        display: flex;
+        gap: 4px;
+        background: #1a1d27;
+        border: 1px solid #2d3148;
+        border-radius: 10px;
+        padding: 4px;
+        margin-bottom: 20px;
+        width: fit-content;
+    }
+
+    .ci-tab {
+        padding: 9px 24px;
+        border-radius: 7px;
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        color: #9ca3af;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: all .2s;
+        user-select: none;
+        border: none;
+        background: transparent;
+    }
+
+        .ci-tab:hover:not(.ci-tab-active) {
+            background: #252840;
+            color: #e2e8f0;
+        }
+
+        .ci-tab.ci-tab-active {
+            background: linear-gradient(135deg,#6366f1,#8b5cf6);
+            color: #fff;
+            font-weight: 600;
+        }
+
+    /* ALERT */
+    .ci-alert {
+        background: rgba(245,158,11,.08);
+        border: 1px solid rgba(245,158,11,.25);
+        border-left: 4px solid #f59e0b;
+        border-radius: 10px;
+        padding: 14px 16px;
+        display: flex;
+        gap: 12px;
+        align-items: flex-start;
+        margin-bottom: 20px;
+    }
+
+    .ci-alert-title {
+        font-size: 13px;
+        font-weight: 700;
+        color: #f59e0b;
+        margin-bottom: 3px;
+    }
+
+    .ci-alert-text {
+        font-size: 13px;
+        color: #d1a84a;
+        line-height: 1.5;
+    }
+
+    /* TOGGLE PANEL */
+    .ci-panel {
+        background: #1a1d27;
+        border: 1px solid #2d3148;
+        border-radius: 12px;
+        overflow: hidden;
+        margin-bottom: 20px;
+    }
+
+    .ci-panel-hdr {
+        padding: 14px 20px;
+        border-bottom: 1px solid #2d3148;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .ci-panel-title {
+        font-size: 14px;
+        font-weight: 700;
+        color: #e2e8f0;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .ci-mini-btn {
+        font-size: 11px;
+        padding: 4px 12px;
+        border-radius: 6px;
+        cursor: pointer;
+        border: 1px solid #2d3148;
+        background: #13151f;
+        color: #9ca3af;
+        font-weight: 500;
+        transition: all .15s;
+    }
+
+        .ci-mini-btn:hover {
+            border-color: #6366f1;
+            color: #a5b4fc;
+        }
+
+    .ci-apps-grid {
+        display: grid;
+        grid-template-columns: repeat(4,1fr);
+        gap: 1px;
+        background: #2d3148;
+    }
+
+    .ci-app-item {
+        background: #1a1d27;
+        padding: 14px 16px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        transition: background .15s;
+    }
+
+        .ci-app-item:hover {
+            background: #1e2035;
+        }
+
+    .ci-app-icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 15px;
+        flex-shrink: 0;
+    }
+
+        .ci-app-icon.auto {
+            background: rgba(99,102,241,.12);
+        }
+
+        .ci-app-icon.off {
+            background: rgba(107,114,128,.1);
+        }
+
+    .ci-app-name {
+        font-size: 13px;
+        font-weight: 600;
+        color: #e2e8f0;
+    }
+
+    .ci-type-badge {
+        font-size: 10px;
+        padding: 2px 8px;
+        border-radius: 10px;
+        font-weight: 700;
+        white-space: nowrap;
+        border: 1px solid;
+    }
+
+    .ci-type-auto {
+        background: rgba(99,102,241,.12);
+        color: #818cf8;
+        border-color: rgba(99,102,241,.3);
+    }
+
+    .ci-type-off {
+        background: rgba(107,114,128,.1);
+        color: #6b7280;
+        border-color: #2d3148;
+    }
+
+    .ci-toggle {
+        position: relative;
+        width: 40px;
+        height: 22px;
+        flex-shrink: 0;
+    }
+
+        .ci-toggle input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+    .ci-toggle-slider {
+        position: absolute;
+        cursor: pointer;
+        inset: 0;
+        background: #2d3148;
+        border-radius: 22px;
+        transition: .2s;
+    }
+
+        .ci-toggle-slider::before {
+            content: '';
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            left: 3px;
+            bottom: 3px;
+            background: #6b7280;
+            border-radius: 50%;
+            transition: .2s;
+        }
+
+    .ci-toggle input:checked + .ci-toggle-slider {
+        background: rgba(99,102,241,.3);
+    }
+
+        .ci-toggle input:checked + .ci-toggle-slider::before {
+            transform: translateX(18px);
+            background: #6366f1;
+        }
+
+    .ci-summary {
+        display: flex;
+        gap: 16px;
+        padding: 12px 20px;
+        background: #13151f;
+        border-top: 1px solid #2d3148;
+    }
+
+    .ci-summary-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        color: #6b7280;
+    }
+
+    .ci-sum-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        flex-shrink: 0;
+    }
+
+    /* ACTION ROW */
+    .ci-action-row {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 24px;
+        flex-wrap: wrap;
+    }
+
+    .ci-run-btn {
+        background: linear-gradient(135deg,#6366f1,#8b5cf6);
+        color: #fff;
+        border: none;
+        padding: 11px 24px;
+        border-radius: 10px;
+        font-size: 14px;
+        font-weight: 700;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: all .15s;
+    }
+
+        .ci-run-btn:hover:not(:disabled) {
+            opacity: .88;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 16px rgba(99,102,241,.4);
+        }
+
+        .ci-run-btn:disabled {
+            opacity: .4;
+            cursor: not-allowed;
+        }
+
+    .ci-last-run {
+        font-size: 12px;
+        color: #6b7280;
+    }
+
+    /* UPLOAD MANUAL — compacto 3 columnas */
+    .ci-manual-grid {
+        display: grid;
+        grid-template-columns: repeat(3,1fr);
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+
+    .ci-upload-card {
+        background: #1a1d27;
+        border: 1px solid #2d3148;
+        border-radius: 10px;
+        overflow: hidden;
+    }
+
+    .ci-upload-card-hdr {
+        padding: 10px 14px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .ci-upload-card-icon {
+        width: 26px;
+        height: 26px;
+        border-radius: 7px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 13px;
+        background: rgba(99,102,241,.12);
+        flex-shrink: 0;
+    }
+
+    .ci-upload-card-name {
+        font-size: 13px;
+        font-weight: 600;
+        color: #e2e8f0;
+        flex: 1;
+    }
+
+    .ci-upload-card-tabla {
+        font-size: 10px;
+        color: #4b5563;
+    }
+
+    .ci-upload-body {
+        padding: 8px 14px 10px;
+        border-top: 1px solid #2d3148;
+    }
+
+    .ci-file-input {
+        display: none;
+    }
+
+    .ci-file-label {
+        background: #252840;
+        color: #9ca3af;
+        border: 1px solid #2d3148;
+        padding: 6px 12px;
+        border-radius: 7px;
+        font-size: 11px;
+        font-weight: 500;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        transition: all .15s;
+    }
+
+        .ci-file-label:hover {
+            border-color: #6366f1;
+            color: #a5b4fc;
+        }
+
+    .ci-file-pill {
+        background: rgba(99,102,241,.1);
+        border: 1px solid rgba(99,102,241,.25);
+        border-radius: 6px;
+        padding: 4px 10px;
+        font-size: 11px;
+        color: #a5b4fc;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        margin-bottom: 5px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .ci-upload-actions {
+        display: flex;
+        gap: 6px;
+        margin-top: 5px;
+    }
+
+    .ci-btn-p {
+        background: linear-gradient(135deg,#6366f1,#8b5cf6);
+        color: #fff;
+        border: none;
+        padding: 6px 12px;
+        border-radius: 7px;
+        font-size: 11px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all .15s;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+        .ci-btn-p:hover:not(:disabled) {
+            opacity: .88;
+        }
+
+        .ci-btn-p:disabled {
+            opacity: .4;
+            cursor: not-allowed;
+        }
+
+    .ci-btn-g {
+        background: #252840;
+        color: #9ca3af;
+        border: 1px solid #2d3148;
+        padding: 6px 10px;
+        border-radius: 7px;
+        font-size: 11px;
+        cursor: pointer;
+    }
+
+    .ci-prog {
+        background: #13151f;
+        border: 1px solid #2d3148;
+        border-radius: 7px;
+        padding: 7px 10px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .ci-spin {
+        width: 14px;
+        height: 14px;
+        border: 2px solid #2d3148;
+        border-top-color: #6366f1;
+        border-radius: 50%;
+        animation: spin .7s linear infinite;
+        flex-shrink: 0;
+    }
+
+    @@keyframes spin {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    /* DATA VIEWER */
+    .ci-data-card {
+        background: #1a1d27;
+        border: 1px solid #2d3148;
+        border-radius: 12px;
+        overflow: hidden;
+    }
+
+    .ci-data-hdr {
+        padding: 14px 20px;
+        border-bottom: 1px solid #2d3148;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    .ci-data-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: #e2e8f0;
+    }
+
+    .ci-count-badge {
+        background: rgba(34,197,94,.12);
+        color: #22c55e;
+        font-size: 11px;
+        padding: 2px 10px;
+        border-radius: 20px;
+        font-weight: 700;
+        border: 1px solid rgba(34,197,94,.2);
+    }
+
+    .ci-data-card .rz-data-grid, .ci-data-card .rz-grid-table, .ci-data-card .rz-data-grid-data {
+        background: #1a1d27 !important;
+        color: #d1d5db !important;
+    }
+
+    .ci-data-card .rz-column-header, .ci-data-card .rz-data-grid-header {
+        background: #13151f !important;
+        color: #6b7280 !important;
+        border-color: #2d3148 !important;
+    }
+
+    .ci-data-card .rz-column-header-title {
+        color: #6b7280 !important;
+        font-size: 11px !important;
+        text-transform: uppercase !important;
+        font-weight: 600 !important;
+    }
+
+    .ci-data-card .rz-data-row td {
+        background: #1a1d27 !important;
+        color: #d1d5db !important;
+        border-color: #1e2035 !important;
+        font-size: 12px !important;
+    }
+
+    .ci-data-card .rz-data-row:hover td {
+        background: #1e2035 !important;
+    }
+
+    .ci-data-card .rz-datatable-scrollable-wrapper, .ci-data-card .rz-virtualscroll {
+        background: #13151f !important;
+    }
+
+    .ci-data-card .rz-paginator {
+        background: #1a1d27 !important;
+        border-top: 1px solid #2d3148 !important;
+        color: #6b7280 !important;
+    }
+</style>
+
+<div class="ci-title">Gestión de Insumos — Capa Aplicación</div>
+<div class="ci-breadcrumb">UAM3 / Capa Aplicación / Cargue de Insumos</div>
+
+<!-- TABS -->
+<div class="ci-tabs">
+    <button class="ci-tab @(tabActivo == 0 ? "ci-tab-active" : "")" @onclick="@(() => tabActivo = 0)">🤖 Robot Automático</button>
+    <button class="ci-tab @(tabActivo == 1 ? "ci-tab-active" : "")" @onclick="@(() => tabActivo = 1)">📤 Cargue Manual</button>
+    <button class="ci-tab @(tabActivo == 2 ? "ci-tab-active" : "")" @onclick="@(() => tabActivo = 2)">🔍 Consultar Datos</button>
+</div>
+
+<!-- ══ TAB ROBOT ══ -->
+@if (tabActivo == 0)
+{
+    <div class="ci-alert">
+        <span style="font-size:18px;flex-shrink:0;">⚠️</span>
+        <div>
+            <div class="ci-alert-title">Importante: Rutas de Archivos</div>
+            <div class="ci-alert-text">Los archivos deben estar en las carpetas configuradas en <strong>appsettings.json</strong>. Activa solo los sistemas que quieres ejecutar.</div>
+        </div>
+    </div>
+
+    <div class="ci-panel">
+        <div class="ci-panel-hdr">
+            <div class="ci-panel-title">⚙️ Sistemas del Robot</div>
+            <div style="display:flex;gap:8px;">
+                <button class="ci-mini-btn" @onclick="SeleccionarTodos">✓ Todos</button>
+                <button class="ci-mini-btn" @onclick="DeseleccionarTodos">✕ Ninguno</button>
+            </div>
+        </div>
+        <div class="ci-apps-grid">
+            @foreach (var app in todosLosSistemas)
+            {
+                var tieneConfig = appsConfigActivas.ContainsKey(app.Key);
+                if (!tieneConfig) continue;
+                var activo = appsSeleccionadas.Contains(app.Key);
+                var iconClass = "auto";
+                var badgeClass = "ci-type-badge ci-type-auto";
+                var badgeText = activo ? "Automático" : "Manual";
+                var cntRobot = countsPorTabla.GetValueOrDefault(app.Key, -1);
+                <div class="ci-app-item">
+                    <div style="display:flex;align-items:center;gap:10px;min-width:0;">
+                        <div class="ci-app-icon @iconClass">⚙️</div>
+                        <div>
+                            <div class="ci-app-name">@app.Value</div>
+                            <div style="display:flex;align-items:center;gap:5px;margin-top:2px;">
+                                @if (cargandoCounts)
+                                {
+                                    <span style="font-size:10px;color:#3d4166;">· ...</span>
+                                }
+                                else if (cntRobot > 0)
+                                {
+
+                                    <span style="font-size:10px;color:#22c55e;font-weight:700;">· @cntRobot.ToString("N0") reg</span>
+                                }
+                                else if (cntRobot == 0)
+                                {
+
+                                    <span style="font-size:10px;color:#ef4444;font-weight:600;">· Sin datos</span>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <span class="@badgeClass">@badgeText</span>
+                        <label class="ci-toggle">
+                            <input type="checkbox" checked="@activo" @onchange="@(() => ToggleApp(app.Key))" />
+                            <span class="ci-toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            }
+        </div>
+        <div class="ci-summary">
+            <div class="ci-summary-item"><span class="ci-sum-dot" style="background:#6366f1;"></span><span><strong style="color:#e2e8f0;">@appsSeleccionadas.Count</strong> automáticos</span></div>
+            <div class="ci-summary-item"><span class="ci-sum-dot" style="background:#f59e0b;"></span><span><strong style="color:#e2e8f0;">@(appsConfigActivas.Count - appsSeleccionadas.Count)</strong> manuales (omitidos)</span></div>
+        </div>
+    </div>
+
+    <div class="ci-action-row">
+        <button class="ci-run-btn" disabled="@(isExecuting || appsSeleccionadas.Count == 0)" @onclick="EjecutarRobot">
+            @if (isExecuting)
+            {
+                <span>⏳</span>
+                <span>Procesando...</span>
+     }
+            else
+            {
+                <span>🤖</span>
+                <span>Ejecutar Robot (@appsSeleccionadas.Count sistemas)</span>
+     }
+        </button>
         @if (ultimoProceso != null)
         {
-            <RadzenText  TextStyle="TextStyle.Caption" Text="@($"ultima ejecucion: {ultimoProceso.Value:dd/MM/yyyy HH:mm:ss}")" />
+            <div class="ci-last-run">Última ejecución: @ultimoProceso.Value.ToString("dd/MM/yyyy HH:mm:ss")</div>
         }
-    </RadzenStack>
+    </div>
+}
 
+<!-- ══ TAB CARGUE MANUAL ══ -->
+@if (tabActivo == 1)
+{
+    <div class="ci-alert">
+        <span style="font-size:18px;flex-shrink:0;">📋</span>
+        <div>
+            <div class="ci-alert-title">Cargue Manual de Sistemas</div>
+            <div class="ci-alert-text">Sube el Excel directamente desde tu equipo. El sistema detecta las columnas automáticamente y reemplaza los datos existentes de la tabla.</div>
+        </div>
+    </div>
 
-    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
-        <RadzenLabel Text="Seleccione Aplicación a Consultar:" Style="font-weight:bold;" />
-        <RadzenDropDown Data="@listaApps"
-                        @bind-Value="@appSeleccionada"
-                        ValueProperty="Value"
-                        TextProperty="Text"
-                        Placeholder="Seleccione una aplicación..."
-                        Change="@OnAppChanged"
-                        Style="width: 300px;" />
-    </RadzenStack>
+    <div class="ci-manual-grid">
+        @foreach (var app in todosLosSistemas)
+        {
+            if (!_mapaTablasPub.TryGetValue(app.Key, out var tabla)) continue;
+            var estado = estadoManual.GetValueOrDefault(app.Key, new ManualUploadState());
+            var inputId = $"file-manual-{app.Key}";
+            var cnt = countsPorTabla.GetValueOrDefault(app.Key, -1);
 
-    @if (columnasIdentificadas != null && columnasIdentificadas.Any())
+            <div class="ci-upload-card" @key="app.Key">
+                <div class="ci-upload-card-hdr">
+                    <div class="ci-upload-card-icon">⚙️</div>
+                    <div style="flex:1;">
+                        <div class="ci-upload-card-name">@app.Value</div>
+                    </div>
+                    @if (cargandoCounts)
+                    {
+                        <span style="font-size:11px;color:#4b5563;">...</span>
+                    }
+                    else if (cnt > 0)
+                    {
+                        <span style="background:rgba(34,197,94,.12);color:#22c55e;font-size:11px;padding:2px 8px;border-radius:20px;font-weight:700;border:1px solid rgba(34,197,94,.2);">✓ @cnt.ToString("N0")</span>
+                    }
+                    else if (cnt == 0)
+                    {
+                        <span style="background:rgba(239,68,68,.12);color:#ef4444;font-size:11px;padding:2px 8px;border-radius:20px;font-weight:700;border:1px solid rgba(239,68,68,.2);">Sin datos</span>
+                    }
+                    else
+                    {
+                        <span style="background:rgba(107,114,128,.1);color:#6b7280;font-size:11px;padding:2px 8px;border-radius:20px;font-weight:700;border:1px solid #2d3148;">—</span>
+                    }
+                </div>
+                <div class="ci-upload-body">
+                    @if (estado.IsReading)
+                    {
+                        <div class="ci-prog"><div class="ci-spin"></div><span style="font-size:11px;color:#9ca3af;">Leyendo...</span></div>
+                    }
+                    else if (estado.Data == null)
+                    {
+                        <InputFile id="@inputId" accept=".xlsx" class="ci-file-input"
+                                   @key="@($"input-{app.Key}")"
+                                   OnChange="@(e => OnManualFileChange(e, app.Key))"
+                                   disabled="@estado.IsProcessing" />
+                        <label for="@inputId" class="ci-file-label">📁 Seleccionar archivo</label>
+                    }
+                    else
+                    {
+                        <div class="ci-file-pill">📄 @estado.FileName</div>
+                        @if (estado.IsProcessing)
+                        {
+                            <div class="ci-prog"><div class="ci-spin"></div><span style="font-size:11px;color:#9ca3af;">Cargando...</span></div>
+                        }
+                        else
+                        {
+                            <div class="ci-upload-actions">
+                                <button class="ci-btn-p" disabled="@estado.IsProcessing" @onclick="@(() => CargarManual(app.Key, tabla))">☁️ Cargar</button>
+                                <button class="ci-btn-g" @onclick="@(() => LimpiarManual(app.Key))">✕</button>
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+        }
+    </div>
+}
+
+<!-- ══ TAB CONSULTAR ══ -->
+@if (tabActivo == 2)
+{
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
+        <span style="font-size:13px;font-weight:600;color:#9ca3af;">Sistema:</span>
+        <RadzenDropDown Data="@listaApps" @bind-Value="@appSeleccionada"
+                        ValueProperty="Value" TextProperty="Text"
+                        Placeholder="Seleccione..." Change="@OnAppChanged"
+                        Style="width:220px;" />
+    </div>
+
+    @if (columnasIdentificadas.Any())
     {
-        <RadzenCard Variant="Variant.Outlined">
-            <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" AlignItems="AlignItems.End">
-                <RadzenStack Gap="0.25rem" Style="flex: 1;">
-                    <RadzenLabel Text="Buscar en columna:" />
-                    <RadzenDropDown Data="@columnasIdentificadas"
-                                    @bind-Value="@columnaFiltro"
-                                    Placeholder="Seleccione columna..."
-                                    Style="width: 100%;" />
-                </RadzenStack>
+        <div style="background:#1a1d27;border:1px solid #2d3148;border-radius:10px;padding:14px 16px;margin-bottom:16px;display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
+            <div>
+                <div style="font-size:11px;color:#6b7280;margin-bottom:5px;font-weight:600;">COLUMNA</div>
+                <RadzenDropDown Data="@columnasIdentificadas" @bind-Value="@columnaFiltro"
+                                Placeholder="Seleccionar..." Style="width:180px;" />
+            </div>
+            <div style="flex:1;min-width:160px;">
+                <div style="font-size:11px;color:#6b7280;margin-bottom:5px;font-weight:600;">VALOR</div>
+                <RadzenTextBox @bind-Value="@valorBusqueda" Placeholder="Buscar..."
+                               Style="width:100%;" @onkeypress="OnKeyPress" />
+            </div>
+            <RadzenButton Text="Buscar" Icon="search" ButtonStyle="ButtonStyle.Primary"
+                          Click="@BuscarDatos" Disabled="@string.IsNullOrEmpty(columnaFiltro)" />
+            <RadzenButton Text="Limpiar" Icon="clear" ButtonStyle="ButtonStyle.Light"
+                          Click="@LimpiarFiltros" />
+        </div>
 
-                <RadzenStack Gap="0.25rem" Style="flex: 2;">
-                    <RadzenLabel Text="Valor a buscar:" />
-                    <RadzenTextBox @bind-Value="@valorBusqueda"
-                                   Placeholder="Ingrese texto a buscar..."
-                                   Style="width: 100%;"
-                                   @onkeypress="@OnKeyPress" />
-                </RadzenStack>
-
-                <RadzenButton Text="Buscar"
-                              Icon="search"
-                              ButtonStyle="ButtonStyle.Success"
-                              Click="@BuscarDatos"
-                              Disabled="@(string.IsNullOrEmpty(columnaFiltro))" />
-
-                <RadzenButton Text="Limpiar"
-                              Icon="clear"
-                              ButtonStyle="ButtonStyle.Light"
-                              Click="@LimpiarFiltros" />
-            </RadzenStack>
-        </RadzenCard>
+        <div class="ci-data-card">
+            <div class="ci-data-hdr">
+                <div class="ci-data-title">@tablaSeleccionada</div>
+                <span class="ci-count-badge">@count.ToString("N0") registros</span>
+            </div>
+            <RadzenDataGrid @ref="grid" Data="@datosDinamicos" Count="@count"
+                            LoadData="@LoadData" TItem="dynamic"
+                            AllowVirtualization="true" Style="height:480px;"
+                            AllowSorting="true" Density="Density.Compact">
+                <Columns>
+                    @foreach (var col in columnasIdentificadas)
+                    {
+                        <RadzenDataGridColumn TItem="dynamic" Title="@col" Property="@col" Sortable="true">
+                            <Template Context="data">@ObtenerValor(data, col)</Template>
+                        </RadzenDataGridColumn>
+                    }
+                </Columns>
+            </RadzenDataGrid>
+        </div>
     }
-
-    @if (columnasIdentificadas != null && columnasIdentificadas.Any())
+    else if (!string.IsNullOrEmpty(appSeleccionada))
     {
-        <RadzenText TextStyle="TextStyle.Caption" Text="@($"Total Registros en BD: {count} (Tabla: {tablaSeleccionada})")" />
-
-        <RadzenDataGrid @ref="grid"
-                        Data="@datosDinamicos"
-                        Count="@count"
-                        LoadData="@LoadData"
-                        TItem="dynamic"
-                        AllowVirtualization="true"
-                        Style="height:500px"
-                        AllowSorting="true"
-                        Density="Density.Compact">
-            <Columns>
-                @foreach (var col in columnasIdentificadas)
-                {
-                    <RadzenDataGridColumn TItem="dynamic"
-                                          Title="@col"
-                                          Property="@col"
-                                          Sortable="true">
-                        <Template Context="data">
-                            @ObtenerValor(data, col)
-                        </Template>
-                    </RadzenDataGridColumn>
-                }
-            </Columns>
-        </RadzenDataGrid>
+        <div style="padding:32px;text-align:center;color:#4b5563;font-size:13px;">
+            Tabla vacía o sin datos. Ejecuta el robot o carga manualmente.
+        </div>
     }
-    else if (!string.IsNullOrEmpty(appSeleccionada) && columnasIdentificadas.Count == 0)
-    {
-        <RadzenProgressBar Value="100" Mode="ProgressBarMode.Indeterminate" />
-    }
-    else if (string.IsNullOrEmpty(appSeleccionada))
-    {
-        <RadzenAlert Severity="NotificationSeverity.Info" Variant="Variant.Flat" Shade="Shade.Lighter">
-            Seleccione una aplicación para visualizar los datos.
-        </RadzenAlert>
-    }
-
-</RadzenStack>
+}
 
 @code {
-    RadzenDataGrid<dynamic>? grid;
+    private int tabActivo = 0;
     private bool isExecuting = false;
+    private DateTime? ultimoProceso;
+
+    private static readonly Dictionary<string, string> todosLosSistemas = new()
+    {
+        { "CrmPortal", "CRM Portal" }, { "DwhFijo",  "DWH Fijo"   }, { "DwhMovil", "DWH Móvil" },
+        { "Fenix",     "Fénix"      }, { "OpenUne",  "Open Une"   }, { "Orion",    "Orion"     },
+        { "SapErp",    "SAP ERP"    }, { "SapGrc",   "SAP GRC"    }, { "Siebel",   "Siebel"    },
+        { "The",       "THE"        }, { "Iam",      "IAM"        }, { "BigData",  "Big Data"  },
+        { "Cbs",       "CBS"        }, { "Cm",       "CM"         }, { "Elk",      "ELK"       },
+        { "Pcrf",      "PCRF"       },
+    };
+
+    private static readonly Dictionary<string, string> _mapaTablasPub = new()
+    {
+        { "CrmPortal","crm_portal" }, { "SapErp","sap_erp"  }, { "DwhFijo","dwh_fijo"  },
+        { "DwhMovil","dwh_movil"   }, { "Fenix","fenix"      }, { "OpenUne","open_une"  },
+        { "Orion","orion"          }, { "SapGrc","sap_grc"   }, { "Siebel","siebel"     },
+        { "The","the"              }, { "Iam","iam"           }, { "BigData","big_data"  },
+        { "Cbs","cbs"              }, { "Cm","cm"             }, { "Elk","elk"           },
+        { "Pcrf","pcrf"            },
+    };
+
+    private Dictionary<string, string> appsConfigActivas = new();
+    private HashSet<string> appsSeleccionadas = new();
+
+    private class ManualUploadState
+    {
+        public MemoryStream? Data { get; set; }
+        public string? FileName { get; set; }
+        public bool IsProcessing { get; set; }
+        public bool IsReading { get; set; }
+    }
+    private Dictionary<string, ManualUploadState> estadoManual = new();
+
+    private Dictionary<string, int> countsPorTabla = new();
+    private bool cargandoCounts = false;
+
+    private RadzenDataGrid<dynamic>? grid;
     private string? appSeleccionada;
     private string? tablaSeleccionada;
-
     private string? columnaFiltro;
     private string? valorBusqueda;
     private string? filtroActual;
-    private DateTime? ultimoProceso;
-
     private IEnumerable<dynamic>? datosDinamicos;
     private int count;
     private List<string> columnasIdentificadas = new();
-
     private List<AppItem> listaApps = new();
 
     protected override async Task OnInitializedAsync()
     {
-        CargarAppsDesdeConfiguracion();
-        await CargarUltimaFechaCargue();
+        appsConfigActivas = RobotService.ObtenerConfiguracionAppsActivas();
+        appsSeleccionadas = new HashSet<string>(appsConfigActivas.Keys);
+
+        foreach (var key in todosLosSistemas.Keys)
+            estadoManual[key] = new ManualUploadState();
+
+        listaApps = appsConfigActivas.Select(kvp => new AppItem
+        {
+            Text = todosLosSistemas.TryGetValue(kvp.Key, out var n) ? n : kvp.Key,
+            Value = kvp.Value
+        }).ToList();
+
+        await CargarUltimaFecha();
+        await CargarCountsTablas();
     }
 
-    private async Task CargarUltimaFechaCargue()
+    private async Task CargarCountsTablas()
+    {
+        cargandoCounts = true;
+        StateHasChanged();
+        await Task.Run(() =>
+        {
+            foreach (var kvp in _mapaTablasPub)
+            {
+                try
+                {
+                    var r = DatosRepo.ObtenerDatosPaginados(kvp.Value, 0, 1, null, null);
+                    countsPorTabla[kvp.Key] = r.TotalRegistros;
+                }
+                catch { countsPorTabla[kvp.Key] = -1; }
+            }
+        });
+        cargandoCounts = false;
+        StateHasChanged();
+    }
+
+    private async Task CargarUltimaFecha()
     {
         try
         {
-            ultimoProceso = await Task.Run(() => DatosRepo.ObtenerUltimaFechaCargue("crm_portal"));
+            ultimoProceso = await Task.Run(() =>
+            {
+                try { return DatosRepo.ObtenerUltimaFechaCargue("crm_portal"); }
+                catch { return (DateTime?)null; }
+            });
         }
-        catch
-        {
-            ultimoProceso = null;
-        }
+        catch { ultimoProceso = null; }
     }
 
-                
-
-    private void CargarAppsDesdeConfiguracion()
+    private void ToggleApp(string key)
     {
-        var appsConfiguradas = RobotService.ObtenerConfiguracionAppsActivas();
-        listaApps = appsConfiguradas.Select(kvp => new AppItem
-        {
-            Text = FormatearNombre(kvp.Key),
-            Value = kvp.Value
-        }).ToList();
+        if (appsSeleccionadas.Contains(key)) appsSeleccionadas.Remove(key);
+        else appsSeleccionadas.Add(key);
+        StateHasChanged();
+    }
+    private void SeleccionarTodos() { appsSeleccionadas = new HashSet<string>(appsConfigActivas.Keys); StateHasChanged(); }
+    private void DeseleccionarTodos() { appsSeleccionadas.Clear(); StateHasChanged(); }
+
+    private async Task EjecutarRobot()
+    {
+        if (appsSeleccionadas.Count == 0) return;
+        isExecuting = true;
+        StateHasChanged();
+
+        await DialogService.OpenAsync<RobotConsoleDialog>(
+            "Ejecución Robot — Capa APP",
+            new Dictionary<string, object> { { "AppsSeleccionadas", new HashSet<string>(appsSeleccionadas) } },
+            new DialogOptions { Width = "720px", Height = "560px", CloseDialogOnEsc = false, CloseDialogOnOverlayClick = false });
+
+        isExecuting = false;
+        ultimoProceso = DateTime.Now;
+        NotificationService.Notify(NotificationSeverity.Success, "Proceso Finalizado", "Revise los logs.", 4000);
+        await CargarCountsTablas();
+
+        if (!string.IsNullOrEmpty(appSeleccionada))
+            await OnAppChanged(appSeleccionada);
     }
 
-    private string FormatearNombre(string nombrePropiedad)
+    private async Task OnManualFileChange(InputFileChangeEventArgs e, string appKey)
     {
-        return nombrePropiedad switch
+        var file = e.File;
+        if (file == null) return;
+
+        estadoManual[appKey].FileName = file.Name;
+        estadoManual[appKey].IsReading = true;
+        estadoManual[appKey].Data = null;
+
+        try
         {
-            "CrmPortal" => "Crm Portal",
-            "SapErp" => "Sap Erp",
-            "DwhFijo" => "Dwh Fijo",
-            "DwhMovil" => "Dwh Movil",
-            "SapGrc" => "Sap Grc",
-            "OpenUne" => "Open Une",
-            "Iam" => "Iam",
-            "BigData" => "Big Data",
-            _ => nombrePropiedad
-        };
+            var ms = new MemoryStream();
+            await using var stream = file.OpenReadStream(maxAllowedSize: 100 * 1024 * 1024);
+            await stream.CopyToAsync(ms);
+            ms.Position = 0;
+            estadoManual[appKey].Data = ms;
+        }
+        catch (Exception ex)
+        {
+            estadoManual[appKey].Data = null;
+            estadoManual[appKey].FileName = null;
+            estadoManual[appKey].IsReading = false;
+            StateHasChanged();
+            NotificationService.Notify(NotificationSeverity.Error, "Error al leer archivo", ex.Message, 5000);
+            return;
+        }
+
+        estadoManual[appKey].IsReading = false;
+        StateHasChanged();
+    }
+
+    private void LimpiarManual(string appKey)
+    {
+        estadoManual[appKey] = new ManualUploadState();
+        StateHasChanged();
+    }
+
+    private async Task CargarManual(string appKey, string tabla)
+    {
+        var estado = estadoManual[appKey];
+        if (estado.Data == null) return;
+
+        estado.IsProcessing = true;
+        StateHasChanged();
+
+        try
+        {
+            estado.Data.Position = 0;
+            await RobotService.ImportarArchivoManual(estado.Data, estado.FileName!, tabla);
+
+            NotificationService.Notify(NotificationSeverity.Success, "Cargue Exitoso",
+                $"{todosLosSistemas[appKey]} cargado correctamente en tabla '{tabla}'.", 4000);
+
+            estadoManual[appKey] = new ManualUploadState();
+
+            try
+            {
+                var r = DatosRepo.ObtenerDatosPaginados(tabla, 0, 1, null, null);
+                countsPorTabla[appKey] = r.TotalRegistros;
+            }
+            catch { }
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(NotificationSeverity.Error, "Error al cargar", ex.Message, 6000);
+            estado.IsProcessing = false;
+        }
+
+        StateHasChanged();
     }
 
     private async Task OnAppChanged(object value)
@@ -197,123 +977,65 @@
         datosDinamicos = null;
         count = 0;
         LimpiarFiltrosInterno();
-
         if (string.IsNullOrEmpty(tablaSeleccionada)) return;
 
         try
         {
             var cols = await Task.Run(() => DatosRepo.ObtenerColumnasTabla(tablaSeleccionada));
             columnasIdentificadas = cols.ToList();
-
-            if (grid != null)
-            {
-                await grid.Reload();
-            }
+            if (grid != null) await grid.Reload();
         }
         catch (Exception ex)
         {
-            NotificationService.Notify(NotificationSeverity.Error, "Error Esquema", $"No se pudieron leer las columnas de {tablaSeleccionada}: {ex.Message}");
+            NotificationService.Notify(NotificationSeverity.Error, "Error", ex.Message);
         }
     }
 
     private async Task OnKeyPress(KeyboardEventArgs args)
     {
-        if (args.Key == "Enter")
-        {
-            await BuscarDatos();
-        }
+        if (args.Key == "Enter") await BuscarDatos();
     }
 
     private async Task BuscarDatos()
     {
-        if (string.IsNullOrEmpty(columnaFiltro) || string.IsNullOrEmpty(valorBusqueda))
-        {
-            NotificationService.Notify(NotificationSeverity.Warning, "Advertencia", "Debe seleccionar una columna e ingresar un valor para buscar.");
-            return;
-        }
-
+        if (string.IsNullOrEmpty(columnaFiltro) || string.IsNullOrEmpty(valorBusqueda)) return;
         var valorSanitizado = valorBusqueda.Replace("'", "''");
-
-        filtroActual = $"\"{columnaFiltro}\" LIKE '%{valorSanitizado}%'";
-
-        if (grid != null)
-        {
-            await grid.FirstPage(true);
-        }
+        filtroActual = $@"""{columnaFiltro}"" LIKE '%{valorSanitizado}%'";
+        if (grid != null) await grid.FirstPage(true);
     }
 
     private async Task LimpiarFiltros()
     {
         LimpiarFiltrosInterno();
-        if (grid != null)
-        {
-            await grid.Reload();
-        }
+        if (grid != null) await grid.Reload();
     }
 
-    private void LimpiarFiltrosInterno()
-    {
-        columnaFiltro = null;
-        valorBusqueda = null;
-        filtroActual = null;
-    }
+    private void LimpiarFiltrosInterno() { columnaFiltro = null; valorBusqueda = null; filtroActual = null; }
 
     private async Task LoadData(LoadDataArgs args)
     {
         if (string.IsNullOrEmpty(tablaSeleccionada)) return;
-
         try
         {
             await Task.Run(() =>
             {
-                var resultado = DatosRepo.ObtenerDatosPaginados(
-                    tablaSeleccionada,
-                    args.Skip ?? 0,
-                    args.Top ?? 20,
-                    args.OrderBy,
-                    filtroActual
-                );
-
-                datosDinamicos = resultado.Datos;
-                count = resultado.TotalRegistros;
+                var r = DatosRepo.ObtenerDatosPaginados(tablaSeleccionada, args.Skip ?? 0, args.Top ?? 20, args.OrderBy, filtroActual);
+                datosDinamicos = r.Datos;
+                count = r.TotalRegistros;
             });
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[Error SQL]: {ex.Message}");
-            NotificationService.Notify(NotificationSeverity.Error, "Error en Búsqueda", ex.Message);
-            datosDinamicos = new List<dynamic>();
-            count = 0;
-        }
-    }
-
-    private async Task EjecutarRobot()
-    {
-        await DialogService.OpenAsync<RobotConsoleDialog>("Ejecucion de Insumos Robot(Apps)",
-               new Dictionary<string, object>(),
-               new DialogOptions() { Width = "700px", Height = "550px", CloseDialogOnEsc = false, CloseDialogOnOverlayClick = false });
-
-        NotificationService.Notify(NotificationSeverity.Success, "Proceso Finalizado", "Revise los logs para más detalles.");
-
-        if (!string.IsNullOrEmpty(appSeleccionada))
-        {
-            await OnAppChanged(appSeleccionada);
+            NotificationService.Notify(NotificationSeverity.Error, "Error SQL", ex.Message);
+            datosDinamicos = new List<dynamic>(); count = 0;
         }
     }
 
     string ObtenerValor(dynamic item, string key)
     {
         var dic = (IDictionary<string, object>)item;
-        if (dic.ContainsKey(key) && dic[key] != null)
-        {
-            return dic[key].ToString()!;
-        }
-        return "";
+        return dic.TryGetValue(key, out var v) && v != null ? v.ToString()! : "";
     }
 
-    public class AppItem
-    {
-        public string Text { get; set; }
-        public string Value { get; set; }
-    }
+    public class AppItem { public string Text { get; set; } = ""; public string Value { get; set; } = ""; }
 }

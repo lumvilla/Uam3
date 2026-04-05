@@ -1,11 +1,592 @@
 ﻿@page "/"
+@using Data.Interfaces.CapaApp.InsertExcelBD
+@using Data.Interfaces.CapaApp.IServiceDesk
+@using Shared.CapaAplicacion.UserDisable
+@inject IDatosExcelRepository DatosExcelService
+@inject IRetirosAppService RetirosAppService
+@inject NavigationManager Nav
 
-<PageTitle>Control de Retiros de las Apps Tigo</PageTitle>
+<PageTitle>Control de Retiros — Dashboard</PageTitle>
 
-<h1>Capa APP</h1>
-<h1>Capa BD</h1>
+<style>
+    /* ── DASHBOARD ── */
+    .db-greeting {
+        margin-bottom: 24px;
+    }
 
-<br />
-<br />
-<h5>Eimer Yesith</h5>
+    .db-title {
+        font-size: 24px;
+        font-weight: 800;
+        color: #fff;
+        margin-bottom: 4px;
+    }
 
+    .db-sub {
+        font-size: 13px;
+        color: #6b7280;
+    }
+
+    /* STAT CARDS */
+    .db-stats {
+        display: grid;
+        grid-template-columns: repeat(4,1fr);
+        gap: 16px;
+        margin-bottom: 28px;
+    }
+
+    .db-stat {
+        background: #1a1d27;
+        border: 1px solid #2d3148;
+        border-radius: 12px;
+        padding: 20px;
+        position: relative;
+        overflow: hidden;
+        cursor: default;
+        transition: transform .15s, box-shadow .15s;
+    }
+
+        .db-stat:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0,0,0,.4);
+        }
+
+        .db-stat::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+        }
+
+        .db-stat.green::before {
+            background: linear-gradient(90deg,#22c55e,#16a34a);
+        }
+
+        .db-stat.blue::before {
+            background: linear-gradient(90deg,#6366f1,#8b5cf6);
+        }
+
+        .db-stat.orange::before {
+            background: linear-gradient(90deg,#f59e0b,#d97706);
+        }
+
+        .db-stat.red::before {
+            background: linear-gradient(90deg,#ef4444,#dc2626);
+        }
+
+    .db-stat-hdr {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 14px;
+    }
+
+    .db-stat-label {
+        font-size: 11px;
+        color: #6b7280;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: .6px;
+    }
+
+    .db-stat-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+    }
+
+        .db-stat-icon.green {
+            background: rgba(34,197,94,.12);
+        }
+
+        .db-stat-icon.blue {
+            background: rgba(99,102,241,.12);
+        }
+
+        .db-stat-icon.orange {
+            background: rgba(245,158,11,.12);
+        }
+
+        .db-stat-icon.red {
+            background: rgba(239,68,68,.12);
+        }
+
+    .db-stat-value {
+        font-size: 32px;
+        font-weight: 800;
+        color: #fff;
+        line-height: 1;
+        margin-bottom: 8px;
+    }
+
+    .db-stat-sub {
+        font-size: 12px;
+        color: #6b7280;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .db-ok {
+        color: #22c55e;
+        font-weight: 600;
+    }
+
+    .db-warn {
+        color: #f59e0b;
+        font-weight: 600;
+    }
+
+    .db-err {
+        color: #ef4444;
+        font-weight: 600;
+    }
+
+    /* SECTION TITLE */
+    .db-section-title {
+        font-size: 13px;
+        font-weight: 700;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: .8px;
+        margin-bottom: 14px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+        .db-section-title::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: #2d3148;
+        }
+
+    /* QUICK ACCESS */
+    .db-quick {
+        display: grid;
+        grid-template-columns: repeat(3,1fr);
+        gap: 12px;
+        margin-bottom: 28px;
+    }
+
+    .db-quick-btn {
+        background: #1a1d27;
+        border: 1px solid #2d3148;
+        border-radius: 12px;
+        padding: 20px 16px;
+        cursor: pointer;
+        transition: all .15s;
+        text-align: center;
+        text-decoration: none;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+    }
+
+        .db-quick-btn:hover {
+            background: #1e2035;
+            border-color: #6366f1;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(99,102,241,.2);
+        }
+
+    .db-quick-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 22px;
+    }
+
+    .db-quick-label {
+        font-size: 13px;
+        font-weight: 600;
+        color: #e2e8f0;
+    }
+
+    .db-quick-desc {
+        font-size: 11px;
+        color: #6b7280;
+        margin-top: -4px;
+    }
+
+    /* RECENT OC TABLE */
+    .db-recent {
+        background: #1a1d27;
+        border: 1px solid #2d3148;
+        border-radius: 12px;
+        overflow: hidden;
+    }
+
+    .db-recent-hdr {
+        padding: 16px 20px;
+        border-bottom: 1px solid #2d3148;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .db-recent-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: #e2e8f0;
+    }
+
+    .db-recent table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .db-recent thead th {
+        padding: 10px 16px;
+        text-align: left;
+        font-size: 11px;
+        font-weight: 600;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: .5px;
+        background: #13151f;
+        border-bottom: 1px solid #2d3148;
+    }
+
+    .db-recent tbody tr {
+        border-bottom: 1px solid #1e2035;
+        transition: background .12s;
+    }
+
+        .db-recent tbody tr:last-child {
+            border-bottom: none;
+        }
+
+        .db-recent tbody tr:hover {
+            background: #1e2035;
+        }
+
+    .db-recent tbody td {
+        padding: 11px 16px;
+        font-size: 13px;
+        color: #d1d5db;
+    }
+
+    .db-empty {
+        padding: 32px;
+        text-align: center;
+        color: #4b5563;
+        font-size: 13px;
+    }
+
+    /* STATUS BADGES */
+    .sb-ok {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 3px 10px;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: 600;
+        background: rgba(34,197,94,.12);
+        color: #22c55e;
+        border: 1px solid rgba(34,197,94,.2);
+    }
+
+    .sb-pen {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 3px 10px;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: 600;
+        background: rgba(245,158,11,.12);
+        color: #f59e0b;
+        border: 1px solid rgba(245,158,11,.2);
+    }
+
+    .sb-err {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 3px 10px;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: 600;
+        background: rgba(239,68,68,.12);
+        color: #ef4444;
+        border: 1px solid rgba(239,68,68,.2);
+    }
+
+    .sb-dot {
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: currentColor;
+        display: inline-block;
+    }
+
+    /* LOADING */
+    .db-loading {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        padding: 48px;
+        color: #6b7280;
+        font-size: 13px;
+    }
+
+    .db-spin {
+        width: 22px;
+        height: 22px;
+        border: 2px solid #2d3148;
+        border-top-color: #6366f1;
+        border-radius: 50%;
+        animation: spin .8s linear infinite;
+    }
+
+    @@keyframes spin {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+</style>
+
+@if (cargando)
+{
+    <div class="db-loading">
+        <div class="db-spin"></div>
+        Cargando dashboard...
+    </div>
+}
+else
+{
+    <!-- GREETING -->
+    <div class="db-greeting">
+        <div class="db-title">Buenos días 👋</div>
+        <div class="db-sub">@DateTime.Now.ToString("dddd, dd 'de' MMMM 'de' yyyy", new System.Globalization.CultureInfo("es-CO")) — Resumen del día</div>
+    </div>
+
+    <!-- STAT CARDS -->
+    <div class="db-stats">
+        <div class="db-stat green">
+            <div class="db-stat-hdr">
+                <div class="db-stat-label">Directorio Activo</div>
+                <div class="db-stat-icon green">🗂️</div>
+            </div>
+            <div class="db-stat-value">@countDA.ToString("N0")</div>
+            <div class="db-stat-sub">
+                @if (countDA > 0)
+                {
+                    <span class="db-ok">✓ Cargado</span>
+                }
+                else
+                {
+
+                    <span class="db-warn">⚠ Sin cargar</span>
+                }
+            </div>
+        </div>
+
+        <div class="db-stat blue">
+            <div class="db-stat-hdr">
+                <div class="db-stat-label">Vinculados</div>
+                <div class="db-stat-icon blue">👥</div>
+            </div>
+            <div class="db-stat-value">@countVin.ToString("N0")</div>
+            <div class="db-stat-sub">
+                @if (countVin > 0)
+                {
+                    <span class="db-ok">✓ Cargado</span>
+                }
+                else
+                {
+
+                    <span class="db-warn">⚠ Sin cargar</span>
+                }
+            </div>
+        </div>
+
+        <div class="db-stat orange">
+            <div class="db-stat-hdr">
+                <div class="db-stat-label">Terceros</div>
+                <div class="db-stat-icon orange">🔗</div>
+            </div>
+            <div class="db-stat-value">@countTer.ToString("N0")</div>
+            <div class="db-stat-sub">
+                @if (countTer > 0)
+                {
+                    <span class="db-ok">✓ Cargado</span>
+                }
+                else
+                {
+
+                    <span class="db-warn">⚠ Sin cargar</span>
+                }
+            </div>
+        </div>
+
+        <div class="db-stat red">
+            <div class="db-stat-hdr">
+                <div class="db-stat-label">Pendientes Deshabilitar</div>
+                <div class="db-stat-icon red">⚠️</div>
+            </div>
+            <div class="db-stat-value">@countPendientes.ToString("N0")</div>
+            <div class="db-stat-sub">
+                @if (countPendientes == 0)
+                {
+                    <span class="db-ok">✓ Al día</span>
+                }
+                else
+                {
+
+                    <span class="db-err">● Requieren gestión</span>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- ACCESOS RÁPIDOS -->
+    <div class="db-section-title">Accesos Rápidos</div>
+    <div class="db-quick">
+        <a class="db-quick-btn" href="/cargue-retiros">
+            <div class="db-quick-icon" style="background:rgba(34,197,94,.12);">📂</div>
+            <div class="db-quick-label">Cargue de Insumos</div>
+            <div class="db-quick-desc">DA · Vinculados · Terceros</div>
+        </a>
+        <a class="db-quick-btn" href="/uam3/cargue-insumos-app">
+            <div class="db-quick-icon" style="background:rgba(99,102,241,.12);">🤖</div>
+            <div class="db-quick-label">Robot Capa APP</div>
+            <div class="db-quick-desc">Cargue automático de sistemas</div>
+        </a>
+        <a class="db-quick-btn" href="/uam3/user-disable">
+            <div class="db-quick-icon" style="background:rgba(239,68,68,.12);">👤</div>
+            <div class="db-quick-label">Usuarios a Deshabilitar</div>
+            <div class="db-quick-desc">Capa Aplicación</div>
+        </a>
+        <a class="db-quick-btn" href="/uam3/ServicesDesk/retiros-user">
+            <div class="db-quick-icon" style="background:rgba(245,158,11,.12);">🎫</div>
+            <div class="db-quick-label">Service Desk</div>
+            <div class="db-quick-desc">Generar y validar OCs</div>
+        </a>
+        <a class="db-quick-btn" href="/sql-console">
+            <div class="db-quick-icon" style="background:rgba(99,102,241,.12);">💻</div>
+            <div class="db-quick-label">Consola SQL</div>
+            <div class="db-quick-desc">Consultas directas a SQLite</div>
+        </a>
+        <a class="db-quick-btn" href="/uam3/reportes">
+            <div class="db-quick-icon" style="background:rgba(34,197,94,.12);">📊</div>
+            <div class="db-quick-label">Reportes</div>
+            <div class="db-quick-desc">Resultados y exportaciones</div>
+        </a>
+    </div>
+
+    <!-- ACTIVIDAD RECIENTE -->
+    <div class="db-section-title">Actividad Reciente — OCs del día</div>
+    <div class="db-recent">
+        <div class="db-recent-hdr">
+            <div class="db-recent-title">Últimas Órdenes de Cambio generadas hoy</div>
+            <a href="/uam3/ServicesDesk/retiros-user"
+               style="font-size:12px;color:#6366f1;text-decoration:none;font-weight:600;">
+                Ver todas →
+            </a>
+        </div>
+        @if (!ocsRecientes.Any())
+        {
+            <div class="db-empty">No hay OCs generadas hoy</div>
+        }
+        else
+        {
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Sistema</th>
+                        <th>Login</th>
+                        <th>Cédula</th>
+                        <th>Número OC</th>
+                        <th>Estado OC</th>
+                        <th>Tipo Cruce</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @{
+                        int i = 1;
+                    }
+                    @foreach (var oc in ocsRecientes)
+                    {
+                        <tr>
+                            <td>@i</td>
+                            <td><span style="color:#a5b4fc;font-weight:600;">@oc.App?.ToUpper()</span></td>
+                            <td>@oc.LoginApp</td>
+                            <td>@oc.CedulaConsolidado</td>
+                            <td>@(string.IsNullOrEmpty(oc.NumeroOc) ? "—" : oc.NumeroOc)</td>
+                            <td>
+                                @{
+                                    var estado = oc.EstadoOc?.ToUpper() ?? "";
+                                    var cls = estado == "CERRADA" || estado == "RESUELTA" ? "sb-ok"
+                                    : estado == "ABIERTA" || estado == "PENDIENTE" ? "sb-pen"
+                                    : "sb-pen";
+                                }
+                                <span class="@cls"><span class="sb-dot"></span>@(string.IsNullOrEmpty(oc.EstadoOc) ? "Pendiente" : oc.EstadoOc)</span>
+                            </td>
+                            <td><span style="font-size:11px;color:#6b7280;">@oc.TipoCruce</span></td>
+                        </tr>
+                        i++;
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+}
+
+@code {
+    private bool cargando = true;
+
+    private int countDA = 0;
+    private int countVin = 0;
+    private int countTer = 0;
+    private int countPendientes = 0;
+
+    private List<RetirosUserApp> ocsRecientes = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Task.Run(() =>
+        {
+            countDA = DatosExcelService.GetDirectorioActivo()?.Count() ?? 0;
+            countVin = DatosExcelService.GetRetirosVinculados()?.Count() ?? 0;
+            countTer = DatosExcelService.GetRetirosTerceros()?.Count() ?? 0;
+        });
+
+        try
+        {
+            var temporales = await RetirosAppService.ObtenerDatosTemporales();
+            if (temporales != null)
+            {
+                var hoy = DateTime.Now.Date;
+                var lista = temporales
+                    .Where(x => x.FechaEjecucion.Date == hoy)
+                    .ToList();
+
+                countPendientes = lista.Count(x => string.IsNullOrEmpty(x.NumeroOc));
+
+                ocsRecientes = lista
+                    .Where(x => !string.IsNullOrEmpty(x.NumeroOc))
+                    .OrderByDescending(x => x.FechaEjecucion)
+                    .Take(8)
+                    .ToList();
+            }
+        }
+        catch { /* Si falla el service desk no rompe el dashboard */ }
+
+        cargando = false;
+    }
+}
