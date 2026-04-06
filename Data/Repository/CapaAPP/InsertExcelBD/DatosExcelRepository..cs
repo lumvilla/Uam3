@@ -234,15 +234,18 @@ public class DatosExcelRepository : IDatosExcelRepository
         using var connection = _factory.CreateConnection();
 
         var sql = @"
-                    SELECT 
-                        id_vinculado      AS IdVinculado,
-                        fecha_cargue    AS FechaCargue,
-                        origen          AS Origen,
-                        company  AS Company,
-                        nombre  AS Nombre,
-                        cedula          AS Cedula,
-                        fecha_retiro    AS FechaRetiro
-                    FROM vinculados;";
+                SELECT 
+                    id_vinculado    AS IdVinculado,
+                    fecha_cargue    AS FechaCargue,
+                    origen          AS Origen,
+                    company         AS Company,
+                    nombre          AS Nombre,
+                    cedula          AS Cedula,
+                    COALESCE(
+                        strftime('%d/%m/%Y', fecha_retiro),
+                        substr(fecha_retiro, 1, 10)
+                    )               AS FechaRetiro
+                FROM vinculados;";
 
         return connection.Query<Vinculados>(sql);
     }

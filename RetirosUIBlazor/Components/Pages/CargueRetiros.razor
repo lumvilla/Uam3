@@ -189,48 +189,7 @@
         color: #ef4444 !important;
     }
 
-    /* UPLOAD */
-    .cr-upload {
-        border: 2px dashed #2d3148;
-        border-radius: 12px;
-        padding: 28px 24px;
-        text-align: center;
-        background: #13151f;
-        margin-bottom: 20px;
-        transition: all .2s;
-    }
-
-        .cr-upload:hover {
-            border-color: #6366f1;
-            background: rgba(99,102,241,.05);
-        }
-
-    .cr-upload-icon {
-        font-size: 34px;
-        margin-bottom: 10px;
-    }
-
-    .cr-upload-title {
-        font-size: 15px;
-        font-weight: 600;
-        color: #e2e8f0;
-        margin-bottom: 5px;
-    }
-
-    .cr-upload-sub {
-        font-size: 12px;
-        color: #6b7280;
-        margin-bottom: 16px;
-    }
-
-    .cr-upload-row {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        justify-content: center;
-        flex-wrap: wrap;
-    }
-
+    /* UPLOAD INLINE */
     .cr-file-pill {
         background: rgba(99,102,241,.12);
         border: 1px solid rgba(99,102,241,.3);
@@ -439,7 +398,7 @@
 
     .cr-tc-card .rz-column-header {
         background: #13151f !important;
-        color: #6b7280 !important;
+        color: #f1f5f9 !important;
         font-size: 11px !important;
         font-weight: 600 !important;
         text-transform: uppercase !important;
@@ -448,15 +407,19 @@
     }
 
     .cr-tc-card .rz-column-header-title {
-        color: #6b7280 !important;
+        color: #f1f5f9 !important;
     }
 
     .cr-tc-card .rz-data-row td {
         background: #1a1d27 !important;
-        color: #d1d5db !important;
+        color: #ffffff !important;
         border-color: #1e2035 !important;
         font-size: 13px !important;
     }
+
+        .cr-tc-card .rz-data-row td * {
+            color: #ffffff !important;
+        }
 
     .cr-tc-card .rz-data-row:hover td {
         background: #1e2035 !important;
@@ -473,7 +436,7 @@
     .cr-tc-card .rz-paginator {
         background: #1a1d27 !important;
         border-top: 1px solid #2d3148 !important;
-        color: #6b7280 !important;
+        color: #f1f5f9 !important;
     }
 
         .cr-tc-card .rz-paginator .rz-paginator-element {
@@ -524,12 +487,12 @@
             {
                 <span class="cr-ok">✓ Cargado</span>
                 <span>· @ultimaCargaDA</span>
- }
+            }
             else
             {
                 <span class="cr-warn">⚠ Sin cargar</span>
                 <span>· Pendiente</span>
- }
+            }
         </div>
     </div>
     <div class="cr-stat blue">
@@ -543,12 +506,12 @@
             {
                 <span class="cr-ok">✓ Cargado</span>
                 <span>· @ultimaCargaVinculados</span>
- }
+            }
             else
             {
                 <span class="cr-warn">⚠ Sin cargar</span>
                 <span>· Pendiente</span>
- }
+            }
         </div>
     </div>
     <div class="cr-stat orange">
@@ -562,12 +525,12 @@
             {
                 <span class="cr-ok">✓ Cargado</span>
                 <span>· @ultimaCargaTerceros</span>
- }
+            }
             else
             {
                 <span class="cr-warn">⚠ Sin cargar</span>
                 <span>· Pendiente</span>
- }
+            }
         </div>
     </div>
 </div>
@@ -595,27 +558,21 @@
 <!-- TAB: DIRECTORIO ACTIVO -->
 @if (tabActivo == 0)
 {
-    <div class="cr-upload">
-        <div class="cr-upload-icon">📤</div>
-        <div class="cr-upload-title">Cargar nuevo Directorio Activo</div>
-        <div class="cr-upload-sub">Arrastra tu archivo .xlsx o .csv aquí, o haz clic para seleccionarlo</div>
-        <div class="cr-upload-row">
-            <InputFile id="inp-da" accept=".xlsx,.csv" class="cr-file-input" OnChange="@(e => OnFileChange(e, "DA"))" disabled="@isProcessingDA" />
-            <label for="inp-da" class="cr-file-label">📁 Seleccionar archivo</label>
-            @if (!string.IsNullOrEmpty(selectedFileNameDA))
-            {
-                <div class="cr-file-pill">📄 @selectedFileNameDA</div>
-                <button class="cr-btn cr-btn-p" disabled="@(fileDA == null || isProcessingDA)" @onclick="@(() => CargarArchivo("DA"))">
-                    @(isProcessingDA ? "⏳ Cargando..." : "☁️ Cargar DA")
-                </button>
-                <button class="cr-btn cr-btn-g" @onclick="@(() => LimpiarArchivo("DA"))">✕ Limpiar</button>
-            }
-            else
-            {
-
-                <button class="cr-btn cr-btn-p" disabled="true">☁️ Cargar DA</button>
-            }
-        </div>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap;">
+        <InputFile id="inp-da" accept=".xlsx,.csv" class="cr-file-input" OnChange="@(e => OnFileChange(e, "DA"))" disabled="@isProcessingDA" />
+        <label for="inp-da" class="cr-file-label">📁 Seleccionar archivo</label>
+        @if (!string.IsNullOrEmpty(selectedFileNameDA))
+        {
+            <div class="cr-file-pill">📄 @selectedFileNameDA</div>
+            <button class="cr-btn cr-btn-p" disabled="@(fileDA == null || isProcessingDA)" @onclick="@(() => CargarArchivo("DA"))">
+                @(isProcessingDA ? "⏳ Cargando..." : "☁️ Cargar DA")
+            </button>
+            <button class="cr-btn cr-btn-g" @onclick="@(() => LimpiarArchivo("DA"))">✕ Limpiar</button>
+        }
+        else
+        {
+            <button class="cr-btn cr-btn-p" disabled="true">☁️ Cargar DA</button>
+        }
     </div>
     @if (isProcessingDA)
     {
@@ -631,7 +588,6 @@
                 }
                 else
                 {
-
                     <span class="cr-badge-emp">Sin datos</span>
                 }
             </div>
@@ -647,7 +603,7 @@
                 <RadzenDataGridColumn TItem="DirectorioActivo" Property="@nameof(DirectorioActivo.Login)" Title="Login" Width="140px" />
                 <RadzenDataGridColumn TItem="DirectorioActivo" Property="@nameof(DirectorioActivo.Identificacion)" Title="Identificación" Width="140px" />
                 <RadzenDataGridColumn TItem="DirectorioActivo" Property="@nameof(DirectorioActivo.NombreCompleto)" Title="Nombre Completo" />
-                <RadzenDataGridColumn TItem="DirectorioActivo" Property="@nameof(DirectorioActivo.Estado)" Title="Estado" Width="130px">
+                <RadzenDataGridColumn TItem="DirectorioActivo" Property="@nameof(DirectorioActivo.Estado)" Title="Estado" Width="180px">
                     <Template Context="d">
                         @if (d.Estado?.ToUpper() == "ACTIVO")
                         {
@@ -655,7 +611,6 @@
                         }
                         else
                         {
-
                             <span class="st-off"><span class="st-dot"></span>@(d.Estado ?? "—")</span>
                         }
                     </Template>
@@ -668,27 +623,21 @@
 <!-- TAB: VINCULADOS -->
 @if (tabActivo == 1)
 {
-    <div class="cr-upload">
-        <div class="cr-upload-icon">📤</div>
-        <div class="cr-upload-title">Cargar nuevos Retiros Vinculados</div>
-        <div class="cr-upload-sub">Archivo Excel de retiros Workday (.xlsx)</div>
-        <div class="cr-upload-row">
-            <InputFile id="inp-vin" accept=".xlsx" class="cr-file-input" OnChange="@(e => OnFileChange(e, "Vinculados"))" disabled="@isProcessingVinculados" />
-            <label for="inp-vin" class="cr-file-label">📁 Seleccionar archivo</label>
-            @if (!string.IsNullOrEmpty(selectedFileNameVinculados))
-            {
-                <div class="cr-file-pill">📄 @selectedFileNameVinculados</div>
-                <button class="cr-btn cr-btn-p" disabled="@(fileVinculados == null || isProcessingVinculados)" @onclick="@(() => CargarArchivo("Vinculados"))">
-                    @(isProcessingVinculados ? "⏳ Cargando..." : "☁️ Cargar Vinculados")
-                </button>
-                <button class="cr-btn cr-btn-g" @onclick="@(() => LimpiarArchivo("Vinculados"))">✕ Limpiar</button>
-            }
-            else
-            {
-
-                <button class="cr-btn cr-btn-p" disabled="true">☁️ Cargar Vinculados</button>
-            }
-        </div>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap;">
+        <InputFile id="inp-vin" accept=".xlsx" class="cr-file-input" OnChange="@(e => OnFileChange(e, "Vinculados"))" disabled="@isProcessingVinculados" />
+        <label for="inp-vin" class="cr-file-label">📁 Seleccionar archivo</label>
+        @if (!string.IsNullOrEmpty(selectedFileNameVinculados))
+        {
+            <div class="cr-file-pill">📄 @selectedFileNameVinculados</div>
+            <button class="cr-btn cr-btn-p" disabled="@(fileVinculados == null || isProcessingVinculados)" @onclick="@(() => CargarArchivo("Vinculados"))">
+                @(isProcessingVinculados ? "⏳ Cargando..." : "☁️ Cargar Vinculados")
+            </button>
+            <button class="cr-btn cr-btn-g" @onclick="@(() => LimpiarArchivo("Vinculados"))">✕ Limpiar</button>
+        }
+        else
+        {
+            <button class="cr-btn cr-btn-p" disabled="true">☁️ Cargar Vinculados</button>
+        }
     </div>
     @if (isProcessingVinculados)
     {
@@ -704,7 +653,6 @@
                 }
                 else
                 {
-
                     <span class="cr-badge-emp">Sin datos</span>
                 }
             </div>
@@ -719,7 +667,7 @@
                 <RadzenDataGridColumn TItem="Vinculados" Property="@nameof(Vinculados.Origen)" Title="Origen" Width="90px" />
                 <RadzenDataGridColumn TItem="Vinculados" Property="@nameof(Vinculados.Nombre)" Title="Nombre" />
                 <RadzenDataGridColumn TItem="Vinculados" Property="@nameof(Vinculados.Cedula)" Title="Cédula" Width="140px" />
-                <RadzenDataGridColumn TItem="Vinculados" Property="@nameof(Vinculados.FechaRetiro)" Title="F. Retiro" Width="140px" />
+                <RadzenDataGridColumn TItem="Vinculados" Property="@nameof(Vinculados.FechaRetiro)" Title="F. Retiro" Width="140px" FormatString="{0:dd/MM/yyyy}" /> />
                 <RadzenDataGridColumn TItem="Vinculados" Property="@nameof(Vinculados.Company)" Title="Compañía" Width="150px" />
             </Columns>
         </RadzenDataGrid>
@@ -729,27 +677,21 @@
 <!-- TAB: TERCEROS -->
 @if (tabActivo == 2)
 {
-    <div class="cr-upload">
-        <div class="cr-upload-icon">📤</div>
-        <div class="cr-upload-title">Cargar nuevos Retiros Terceros (IAM)</div>
-        <div class="cr-upload-sub">Archivo Excel de retiros de Terceros (.xlsx)</div>
-        <div class="cr-upload-row">
-            <InputFile id="inp-ter" accept=".xlsx" class="cr-file-input" OnChange="@(e => OnFileChange(e, "Terceros"))" disabled="@isProcessingTerceros" />
-            <label for="inp-ter" class="cr-file-label">📁 Seleccionar archivo</label>
-            @if (!string.IsNullOrEmpty(selectedFileNameTerceros))
-            {
-                <div class="cr-file-pill">📄 @selectedFileNameTerceros</div>
-                <button class="cr-btn cr-btn-p" disabled="@(fileTerceros == null || isProcessingTerceros)" @onclick="@(() => CargarArchivo("Terceros"))">
-                    @(isProcessingTerceros ? "⏳ Cargando..." : "☁️ Cargar Terceros")
-                </button>
-                <button class="cr-btn cr-btn-g" @onclick="@(() => LimpiarArchivo("Terceros"))">✕ Limpiar</button>
-            }
-            else
-            {
-
-                <button class="cr-btn cr-btn-p" disabled="true">☁️ Cargar Terceros</button>
-            }
-        </div>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap;">
+        <InputFile id="inp-ter" accept=".xlsx" class="cr-file-input" OnChange="@(e => OnFileChange(e, "Terceros"))" disabled="@isProcessingTerceros" />
+        <label for="inp-ter" class="cr-file-label">📁 Seleccionar archivo</label>
+        @if (!string.IsNullOrEmpty(selectedFileNameTerceros))
+        {
+            <div class="cr-file-pill">📄 @selectedFileNameTerceros</div>
+            <button class="cr-btn cr-btn-p" disabled="@(fileTerceros == null || isProcessingTerceros)" @onclick="@(() => CargarArchivo("Terceros"))">
+                @(isProcessingTerceros ? "⏳ Cargando..." : "☁️ Cargar Terceros")
+            </button>
+            <button class="cr-btn cr-btn-g" @onclick="@(() => LimpiarArchivo("Terceros"))">✕ Limpiar</button>
+        }
+        else
+        {
+            <button class="cr-btn cr-btn-p" disabled="true">☁️ Cargar Terceros</button>
+        }
     </div>
     @if (isProcessingTerceros)
     {
@@ -765,7 +707,6 @@
                 }
                 else
                 {
-
                     <span class="cr-badge-emp">Sin datos</span>
                 }
             </div>
@@ -801,7 +742,6 @@
                 }
                 else
                 {
-
                     <span class="cr-badge-emp">Sin datos</span>
                 }
             </div>
@@ -814,7 +754,6 @@
                     }
                     else
                     {
-
                         <span>🔄</span>
                     }
                     Refrescar
@@ -849,7 +788,6 @@
                             }
                             else
                             {
-
                                 <span class="st-off"><span class="st-dot"></span>@est</span>
                             }
                         </Template>
@@ -1054,7 +992,6 @@
             await LoadDataAsync("Vinculados");
             await LoadDataAsync("Terceros");
 
-            // Invalidar consolidado para que se recargue la próxima vez
             consolidadoList = null;
 
             NotificationService.Notify(new NotificationMessage
