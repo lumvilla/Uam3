@@ -185,7 +185,7 @@ public class DataServicesRobot : IDataInsumosRobot
         }
         else
         {
-            sb.Append(" ORDER BY rowid DESC");
+            sb.Append(" ORDER BY 1 DESC");
         }
 
         sb.Append($" LIMIT {take} OFFSET {skip}");
