@@ -51,38 +51,22 @@
             <div class="rz-p-sm-12">
                 <RadzenAccordion Multiple="true">
                     <Items>
-                        @* Portal *@
                         @RenderAccordionItem("portal", retirosPortal, "CRM Portal", "web")
-
-                        @* Directorio Activo *@
                         @RenderAccordionItem("da", retirosDA, "Directorio Activo", "folder_shared")
-
-                        @* Siebel Movil *@
                         @RenderAccordionItem("siebelmovil", retirosSiebelMovil, "Siebel Móvil", "smartphone")
-
-                        @* Siebel Fijo *@
                         @RenderAccordionItem("siebelfijo", retirosSiebelFijo, "Siebel Fijo", "desktop_windows")
-
-                        @* Fenix *@
                         @RenderAccordionItem("fenix", retirosFenix, "Fenix", "whatshot")
-
-                        @* Open Une *@
                         @RenderAccordionItem("open", retirosOpen, "Open Une", "settings_input_component")
-
-                        @* DWH Movil *@
                         @RenderAccordionItem("dwhmovil", retirosDwhMovil, "DWH Móvil", "storage")
-
-                        @* DWH Fijo *@
                         @RenderAccordionItem("dwhfijo", retirosDwhFijo, "DWH Fijo", "dns")
-
-                        @* SAP ERP *@
                         @RenderAccordionItem("saperp", retirosSapErp, "SAP ERP", "business")
-
-                        @* SAP GRC *@
                         @RenderAccordionItem("sapgrc", retirosSapGrc, "SAP GRC", "security")
-
-                        @* IAM *@
                         @RenderAccordionItem("iam", retirosIam, "IAM", "groups")
+                        @RenderAccordionItem("cbs", retirosCbs, "CBS", "storage")
+                        @RenderAccordionItem("cm", retirosCm, "CM", "settings")
+                        @RenderAccordionItem("elk", retirosElk, "ELK", "analytics")
+                        @RenderAccordionItem("pcrf", retirosPcrf, "PCRF", "hub")
+                        @RenderAccordionItem("bigdata", retirosBigData, "Big Data", "cloud")
                     </Items>
                 </RadzenAccordion>
             </div>
@@ -111,10 +95,17 @@
     private IEnumerable<RetirosUserApp> retirosSapErp = Enumerable.Empty<RetirosUserApp>();
     private IEnumerable<RetirosUserApp> retirosSapGrc = Enumerable.Empty<RetirosUserApp>();
     private IEnumerable<RetirosUserApp> retirosIam = Enumerable.Empty<RetirosUserApp>();
+    private IEnumerable<RetirosUserApp> retirosCbs = Enumerable.Empty<RetirosUserApp>();
+    private IEnumerable<RetirosUserApp> retirosCm = Enumerable.Empty<RetirosUserApp>();
+    private IEnumerable<RetirosUserApp> retirosElk = Enumerable.Empty<RetirosUserApp>();
+    private IEnumerable<RetirosUserApp> retirosPcrf = Enumerable.Empty<RetirosUserApp>();
+    private IEnumerable<RetirosUserApp> retirosBigData = Enumerable.Empty<RetirosUserApp>();
 
     protected override void OnInitialized()
     {
-        var apps = new[] { "portal", "da", "siebelmovil", "siebelfijo", "fenix", "open", "dwhmovil", "dwhfijo", "saperp", "sapgrc", "iam" };
+        var apps = new[] { "portal", "da", "siebelmovil", "siebelfijo", "fenix", "open",
+                           "dwhmovil", "dwhfijo", "saperp", "sapgrc", "iam",
+                           "cbs", "cm", "elk", "pcrf", "bigdata" };
         foreach (var a in apps)
         {
             if (!selectedTipoCruce.ContainsKey(a)) selectedTipoCruce[a] = "AMBOS";
@@ -129,7 +120,6 @@
             <RadzenStack Gap="0.5rem">
                 <RadzenText TextStyle="TextStyle.Caption" Text="@($"Total registros: {data?.Count() ?? 0}")" />
                 @RenderSeccionProcesar(app, data, true)
-
                 <RadzenTabs RenderMode="TabRenderMode.Client">
                     <Tabs>
                         <RadzenTabsItem Text="Por Login">
@@ -140,7 +130,6 @@
                                 @RenderDataGrid(data?.Where(x => x.TipoCruce == "LOGIN"))
                             </RadzenStack>
                         </RadzenTabsItem>
-
                         <RadzenTabsItem Text="Por Cédula">
                             <RadzenStack Gap="0.5rem">
                                 <RadzenText TextStyle="TextStyle.Caption"
@@ -161,16 +150,9 @@
     private IEnumerable<string> GetFechasEjecucion(string app)
     {
         var data = GetDataForApp(app);
-
-        if (data == null || !data.Any())
-        {
-            return Enumerable.Empty<string>();
-        }
-
+        if (data == null || !data.Any()) return Enumerable.Empty<string>();
         return data.Select(x => x.FechaEjecucion.ToString("yyyy-MM-dd"))
-                   .Distinct()
-                   .OrderByDescending(x => x)
-                   .ToList();
+                   .Distinct().OrderByDescending(x => x).ToList();
     }
 
     private IEnumerable<RetirosUserApp> GetDataForApp(string app)
@@ -188,6 +170,11 @@
             "saperp" => retirosSapErp,
             "sapgrc" => retirosSapGrc,
             "iam" => retirosIam,
+            "cbs" => retirosCbs,
+            "cm" => retirosCm,
+            "elk" => retirosElk,
+            "pcrf" => retirosPcrf,
+            "bigdata" => retirosBigData,
             _ => Enumerable.Empty<RetirosUserApp>()
         };
     }
@@ -222,8 +209,7 @@
                                                                 new { Key = "LOGIN", Text = "Login" },
                                                                 new { Key = "CEDULA", Text = "Cédula" }
                                                             })"
-                        TextProperty="Text"
-                        ValueProperty="Key"
+                        TextProperty="Text" ValueProperty="Key"
                         Placeholder="Seleccione tipo"
                         Style="width:200px;"
                         Disabled="@(!hayDatos)"
@@ -239,15 +225,11 @@
 
                 @if (!hayDatos)
                 {
-                    <RadzenText Text="Cargue los datos temporales primero."
-                                TextStyle="TextStyle.Caption"
-                                class="rz-color-warning" />
+                    <RadzenText Text="Cargue los datos temporales primero." TextStyle="TextStyle.Caption" class="rz-color-warning" />
                 }
                 else if (string.IsNullOrEmpty(fechaSeleccionada))
                 {
-                    <RadzenText Text="Seleccione una fecha de ejecución."
-                                TextStyle="TextStyle.Caption"
-                                class="rz-color-info" />
+                    <RadzenText Text="Seleccione una fecha de ejecución." TextStyle="TextStyle.Caption" class="rz-color-info" />
                 }
             </RadzenStack>
         </div>;
@@ -256,28 +238,23 @@
     private RenderFragment RenderDataGrid(IEnumerable<RetirosUserApp> data)
     {
         if (data == null) data = Enumerable.Empty<RetirosUserApp>();
-
         return @<RadzenDataGrid Data="@data"
-                                        AllowFiltering="true"
-                                        AllowSorting="true"
-                                        AllowPaging="true"
-                                        PageSize="10"
-                                        AllowColumnResize="true"
-                                        Density="Density.Compact"
+                                        AllowFiltering="true" AllowSorting="true" AllowPaging="true"
+                                        PageSize="10" AllowColumnResize="true" Density="Density.Compact"
                                         EmptyText="No hay registros para mostrar"
                                         FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
                                         TItem="RetirosUserApp">
             <Columns>
-                <RadzenDataGridColumn TItem="RetirosUserApp" Property="FechaEjecucion" Title="Fecha Ejecución" Width="140px" Filterable="true" Sortable="true" />
-                <RadzenDataGridColumn TItem="RetirosUserApp" Property="CedulaConsolidado" Title="Cédula Consolidado" Width="130px" Filterable="true" Sortable="true" />
-                <RadzenDataGridColumn TItem="RetirosUserApp" Property="LoginConsolidado" Title="Login Consolidado" Width="150px" Filterable="true" Sortable="true" />
-                <RadzenDataGridColumn TItem="RetirosUserApp" Property="NombreConsolidado" Title="Nombre" Width="200px" Filterable="true" Sortable="true" />
-                <RadzenDataGridColumn TItem="RetirosUserApp" Property="EstadoConsolidado" Title="Estado Consolidado" Width="140px" Filterable="true" Sortable="true" />
-                <RadzenDataGridColumn TItem="RetirosUserApp" Property="FechaRetiro" Title="Fecha Retiro" Width="120px" Filterable="true" Sortable="true" />
-                <RadzenDataGridColumn TItem="RetirosUserApp" Property="TipoCruce" Title="Tipo Cruce" Width="100px" Filterable="true" Sortable="true" />
-                <RadzenDataGridColumn TItem="RetirosUserApp" Property="CedulaApp" Title="Cédula App" Width="120px" Filterable="true" Sortable="true" />
-                <RadzenDataGridColumn TItem="RetirosUserApp" Property="LoginApp" Title="Login App" Width="150px" Filterable="true" Sortable="true" />
-                <RadzenDataGridColumn TItem="RetirosUserApp" Property="EstadoApp" Title="Estado App" Width="150px" Filterable="true" Sortable="true" />
+                <RadzenDataGridColumn TItem="RetirosUserApp" Property="FechaEjecucion" Title="Fecha Ejecución" Width="140px" />
+                <RadzenDataGridColumn TItem="RetirosUserApp" Property="CedulaConsolidado" Title="Cédula Consolidado" Width="130px" />
+                <RadzenDataGridColumn TItem="RetirosUserApp" Property="LoginConsolidado" Title="Login Consolidado" Width="150px" />
+                <RadzenDataGridColumn TItem="RetirosUserApp" Property="NombreConsolidado" Title="Nombre" Width="200px" />
+                <RadzenDataGridColumn TItem="RetirosUserApp" Property="EstadoConsolidado" Title="Estado Consolidado" Width="140px" />
+                <RadzenDataGridColumn TItem="RetirosUserApp" Property="FechaRetiro" Title="Fecha Retiro" Width="120px" />
+                <RadzenDataGridColumn TItem="RetirosUserApp" Property="TipoCruce" Title="Tipo Cruce" Width="100px" />
+                <RadzenDataGridColumn TItem="RetirosUserApp" Property="CedulaApp" Title="Cédula App" Width="120px" />
+                <RadzenDataGridColumn TItem="RetirosUserApp" Property="LoginApp" Title="Login App" Width="150px" />
+                <RadzenDataGridColumn TItem="RetirosUserApp" Property="EstadoApp" Title="Estado App" Width="150px" />
             </Columns>
         </RadzenDataGrid>;
     }
@@ -286,7 +263,6 @@
     {
         isLoadingData = true;
         StateHasChanged();
-
         await Task.Delay(50);
 
         try
@@ -306,6 +282,11 @@
                 retirosSapErp = todosLosDatos.Where(x => x.App?.Equals("saperp", StringComparison.OrdinalIgnoreCase) == true);
                 retirosSapGrc = todosLosDatos.Where(x => x.App?.Equals("sapgrc", StringComparison.OrdinalIgnoreCase) == true);
                 retirosIam = todosLosDatos.Where(x => x.App?.Equals("iam", StringComparison.OrdinalIgnoreCase) == true);
+                retirosCbs = todosLosDatos.Where(x => x.App?.Equals("cbs", StringComparison.OrdinalIgnoreCase) == true);
+                retirosCm = todosLosDatos.Where(x => x.App?.Equals("cm", StringComparison.OrdinalIgnoreCase) == true);
+                retirosElk = todosLosDatos.Where(x => x.App?.Equals("elk", StringComparison.OrdinalIgnoreCase) == true);
+                retirosPcrf = todosLosDatos.Where(x => x.App?.Equals("pcrf", StringComparison.OrdinalIgnoreCase) == true);
+                retirosBigData = todosLosDatos.Where(x => x.App?.Equals("bigdata", StringComparison.OrdinalIgnoreCase) == true);
 
                 totalRegistros = todosLosDatos.Count();
                 hayDatos = true;
@@ -378,10 +359,9 @@
                 {
                     Severity = NotificationSeverity.Success,
                     Summary = "OC Generada",
-                    Detail = $"La orden de cambio para {GetAppDisplayName(app)} se generó correctamente.",
+                    Detail = $"Los registros de {GetAppDisplayName(app)} fueron marcados como PENDIENTE.",
                     Duration = 5000
                 });
-
                 await RefreshAppData(app);
             }
             else
@@ -390,7 +370,7 @@
                 {
                     Severity = NotificationSeverity.Warning,
                     Summary = "Sin Cambios",
-                    Detail = "No se pudo generar la orden de cambio.",
+                    Detail = "No se encontraron registros pendientes para esa fecha.",
                     Duration = 4000
                 });
             }
@@ -412,70 +392,53 @@
         }
     }
 
-    private string GetAppDisplayName(string app)
+    private string GetAppDisplayName(string app) => app.ToLower() switch
     {
-        return app.ToLower() switch
-        {
-            "portal" => "CRM Portal",
-            "da" => "Directorio Activo",
-            "siebelmovil" => "Siebel Móvil",
-            "siebelfijo" => "Siebel Fijo",
-            "fenix" => "Fenix",
-            "open" => "Open Une",
-            "dwhmovil" => "DWH Móvil",
-            "dwhfijo" => "DWH Fijo",
-            "saperp" => "SAP ERP",
-            "sapgrc" => "SAP GRC",
-            "iam" => "IAM",
-            _ => app
-        };
-    }
+        "portal" => "CRM Portal",
+        "da" => "Directorio Activo",
+        "siebelmovil" => "Siebel Móvil",
+        "siebelfijo" => "Siebel Fijo",
+        "fenix" => "Fenix",
+        "open" => "Open Une",
+        "dwhmovil" => "DWH Móvil",
+        "dwhfijo" => "DWH Fijo",
+        "saperp" => "SAP ERP",
+        "sapgrc" => "SAP GRC",
+        "iam" => "IAM",
+        "cbs" => "CBS",
+        "cm" => "CM",
+        "elk" => "ELK",
+        "pcrf" => "PCRF",
+        "bigdata" => "Big Data",
+        _ => app
+    };
 
     private async Task RefreshAppData(string app)
     {
         try
         {
             var todosLosDatos = await RetirosAppService.ObtenerDatosTemporales();
-
             if (todosLosDatos != null && todosLosDatos.Any())
             {
                 switch (app.ToLower())
                 {
-                    case "portal":
-                        retirosPortal = todosLosDatos.Where(x => x.App?.Equals("portal", StringComparison.OrdinalIgnoreCase) == true);
-                        break;
-                    case "da":
-                        retirosDA = todosLosDatos.Where(x => x.App?.Equals("da", StringComparison.OrdinalIgnoreCase) == true);
-                        break;
-                    case "siebelmovil":
-                        retirosSiebelMovil = todosLosDatos.Where(x => x.App?.Equals("siebelmovil", StringComparison.OrdinalIgnoreCase) == true);
-                        break;
-                    case "siebelfijo":
-                        retirosSiebelFijo = todosLosDatos.Where(x => x.App?.Equals("siebelfijo", StringComparison.OrdinalIgnoreCase) == true);
-                        break;
-                    case "fenix":
-                        retirosFenix = todosLosDatos.Where(x => x.App?.Equals("fenix", StringComparison.OrdinalIgnoreCase) == true);
-                        break;
-                    case "open":
-                        retirosOpen = todosLosDatos.Where(x => x.App?.Equals("open", StringComparison.OrdinalIgnoreCase) == true);
-                        break;
-                    case "dwhmovil":
-                        retirosDwhMovil = todosLosDatos.Where(x => x.App?.Equals("dwhmovil", StringComparison.OrdinalIgnoreCase) == true);
-                        break;
-                    case "dwhfijo":
-                        retirosDwhFijo = todosLosDatos.Where(x => x.App?.Equals("dwhfijo", StringComparison.OrdinalIgnoreCase) == true);
-                        break;
-                    case "saperp":
-                        retirosSapErp = todosLosDatos.Where(x => x.App?.Equals("saperp", StringComparison.OrdinalIgnoreCase) == true);
-                        break;
-                    case "sapgrc":
-                        retirosSapGrc = todosLosDatos.Where(x => x.App?.Equals("sapgrc", StringComparison.OrdinalIgnoreCase) == true);
-                        break;
-                    case "iam":
-                        retirosIam = todosLosDatos.Where(x => x.App?.Equals("iam", StringComparison.OrdinalIgnoreCase) == true);
-                        break;
+                    case "portal": retirosPortal = todosLosDatos.Where(x => x.App?.Equals("portal", StringComparison.OrdinalIgnoreCase) == true); break;
+                    case "da": retirosDA = todosLosDatos.Where(x => x.App?.Equals("da", StringComparison.OrdinalIgnoreCase) == true); break;
+                    case "siebelmovil": retirosSiebelMovil = todosLosDatos.Where(x => x.App?.Equals("siebelmovil", StringComparison.OrdinalIgnoreCase) == true); break;
+                    case "siebelfijo": retirosSiebelFijo = todosLosDatos.Where(x => x.App?.Equals("siebelfijo", StringComparison.OrdinalIgnoreCase) == true); break;
+                    case "fenix": retirosFenix = todosLosDatos.Where(x => x.App?.Equals("fenix", StringComparison.OrdinalIgnoreCase) == true); break;
+                    case "open": retirosOpen = todosLosDatos.Where(x => x.App?.Equals("open", StringComparison.OrdinalIgnoreCase) == true); break;
+                    case "dwhmovil": retirosDwhMovil = todosLosDatos.Where(x => x.App?.Equals("dwhmovil", StringComparison.OrdinalIgnoreCase) == true); break;
+                    case "dwhfijo": retirosDwhFijo = todosLosDatos.Where(x => x.App?.Equals("dwhfijo", StringComparison.OrdinalIgnoreCase) == true); break;
+                    case "saperp": retirosSapErp = todosLosDatos.Where(x => x.App?.Equals("saperp", StringComparison.OrdinalIgnoreCase) == true); break;
+                    case "sapgrc": retirosSapGrc = todosLosDatos.Where(x => x.App?.Equals("sapgrc", StringComparison.OrdinalIgnoreCase) == true); break;
+                    case "iam": retirosIam = todosLosDatos.Where(x => x.App?.Equals("iam", StringComparison.OrdinalIgnoreCase) == true); break;
+                    case "cbs": retirosCbs = todosLosDatos.Where(x => x.App?.Equals("cbs", StringComparison.OrdinalIgnoreCase) == true); break;
+                    case "cm": retirosCm = todosLosDatos.Where(x => x.App?.Equals("cm", StringComparison.OrdinalIgnoreCase) == true); break;
+                    case "elk": retirosElk = todosLosDatos.Where(x => x.App?.Equals("elk", StringComparison.OrdinalIgnoreCase) == true); break;
+                    case "pcrf": retirosPcrf = todosLosDatos.Where(x => x.App?.Equals("pcrf", StringComparison.OrdinalIgnoreCase) == true); break;
+                    case "bigdata": retirosBigData = todosLosDatos.Where(x => x.App?.Equals("bigdata", StringComparison.OrdinalIgnoreCase) == true); break;
                 }
-
                 totalRegistros = todosLosDatos.Count();
                 hayDatos = totalRegistros > 0;
             }
@@ -485,7 +448,6 @@
                 hayDatos = false;
                 totalRegistros = 0;
             }
-
             StateHasChanged();
         }
         catch (Exception ex)
@@ -502,16 +464,9 @@
 
     private void LimpiarDatos()
     {
-        retirosPortal = Enumerable.Empty<RetirosUserApp>();
-        retirosDA = Enumerable.Empty<RetirosUserApp>();
-        retirosSiebelMovil = Enumerable.Empty<RetirosUserApp>();
-        retirosSiebelFijo = Enumerable.Empty<RetirosUserApp>();
-        retirosFenix = Enumerable.Empty<RetirosUserApp>();
-        retirosOpen = Enumerable.Empty<RetirosUserApp>();
-        retirosDwhMovil = Enumerable.Empty<RetirosUserApp>();
-        retirosDwhFijo = Enumerable.Empty<RetirosUserApp>();
-        retirosSapErp = Enumerable.Empty<RetirosUserApp>();
-        retirosSapGrc = Enumerable.Empty<RetirosUserApp>();
-        retirosIam = Enumerable.Empty<RetirosUserApp>();
+        retirosPortal = retirosDA = retirosSiebelMovil = retirosSiebelFijo = retirosFenix =
+        retirosOpen = retirosDwhMovil = retirosDwhFijo = retirosSapErp = retirosSapGrc =
+        retirosIam = retirosCbs = retirosCm = retirosElk = retirosPcrf = retirosBigData =
+            Enumerable.Empty<RetirosUserApp>();
     }
 }
