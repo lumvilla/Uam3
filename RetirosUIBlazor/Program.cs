@@ -132,7 +132,15 @@ builder.Services.AddScoped<ICrucesDisplayService, CrucesDisplayService>();
 builder.Services.AddScoped<IRetirosAppService, RetirosAppService>();
 
 builder.Services.AddScoped<SqlService>();
+// Capa Base de Datos
+builder.Services.AddScoped<ICrucesExcelBD, CrucesUserDisableBD>();
+builder.Services.AddScoped<ICrucesDisplayServiceBD, CrucesDisplayServiceBD>();
+builder.Services.AddScoped<IRetirosDbService, RetirosDbService>();
 
+// Retiros No Sox
+builder.Services.AddScoped<ICrucesExcelNoSox, CrucesUserDisableNoSox>();
+builder.Services.AddScoped<ICrucesDisplayServiceNoSox, CrucesDisplayServiceNoSox>();
+builder.Services.AddScoped<IRetirosNoSoxService, RetirosNoSoxService>();
 // Registrar Radzen Blazor Components y DI
 builder.Services.AddRadzenComponents();
 builder.Services.AddScoped<DialogService>();

@@ -762,7 +762,7 @@ public class CrucesUserDisable : ICrucesExcel
         FROM consolidado c
         INNER JOIN iam i ON i.Login_ID = c.login COLLATE NOCASE
         WHERE i.Estado_de_la_Identidad = 'Habilitado' COLLATE NOCASE
-          AND i.ESTADO = '1' COLLATE NOCASE
+          AND i.Estado_Sistema = '1' COLLATE NOCASE
           AND c.estado_entidad NOT IN ('Habilitado', 'Habilitado.') COLLATE NOCASE
           AND c.estado_entidad IS NOT NULL
         UNION ALL
@@ -775,7 +775,7 @@ public class CrucesUserDisable : ICrucesExcel
         FROM consolidado c
         INNER JOIN iam i ON i.Numero_de_identificacion = c.cedula COLLATE NOCASE
         WHERE i.Estado_de_la_Identidad = 'Habilitado' COLLATE NOCASE
-          AND i.ESTADO = '1' COLLATE NOCASE
+          AND i.Estado_Sistema = '1' COLLATE NOCASE
           AND c.estado_entidad NOT IN ('Habilitado', 'Habilitado.') COLLATE NOCASE
           AND c.estado_entidad IS NOT NULL
           AND (i.Login_ID <> c.login OR i.Login_ID IS NULL OR c.login IS NULL)";
