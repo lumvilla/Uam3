@@ -39,6 +39,12 @@ public class CrucesUserDisable : ICrucesExcel
                       AND COALESCE(t.tipo_cruce, '') = COALESCE(d.TipoCruce, '')
                       AND DATE(t.fecha_ejecucion) = DATE('now')
                 )
+                AND NOT EXISTS (
+                    SELECT 1 FROM retiro_app r
+                    WHERE r.app = 'portal' COLLATE NOCASE
+                    AND r.login_consolidado = d.LoginConsolidado COLLATE NOCASE
+                    AND r.estado_oc = 'COMPLETADA'
+                )
                 ORDER BY d.FechaRetiro DESC;";
             var lista = (await conexion.QueryAsync<UsuarioDisableDto>(sql)).ToList();
             return lista.GroupBy(x => new { x.CedulaConsolidado, x.LoginApp, x.TipoCruce })
@@ -64,6 +70,12 @@ public class CrucesUserDisable : ICrucesExcel
                       AND COALESCE(t.tipo_cruce, '') = COALESCE(d.TipoCruce, '')
                       AND DATE(t.fecha_ejecucion) = DATE('now')
                 )
+                AND NOT EXISTS (
+                    SELECT 1 FROM retiro_app r
+                    WHERE r.app = 'da' COLLATE NOCASE
+                    AND r.login_consolidado = d.LoginConsolidado COLLATE NOCASE
+                    AND r.estado_oc = 'COMPLETADA'
+                )
                 ORDER BY d.FechaRetiro DESC;";
             var lista = (await conexion.QueryAsync<UsuarioDisableDto>(sql)).ToList();
             return lista.GroupBy(x => new { x.CedulaConsolidado, x.CedulaApp, x.TipoCruce })
@@ -88,6 +100,12 @@ public class CrucesUserDisable : ICrucesExcel
                       AND COALESCE(t.login_app, '') = COALESCE(d.LoginApp, '')
                       AND COALESCE(t.tipo_cruce, '') = COALESCE(d.TipoCruce, '')
                       AND DATE(t.fecha_ejecucion) = DATE('now')
+                )
+                AND NOT EXISTS (
+                    SELECT 1 FROM retiro_app r
+                    WHERE r.app = 'siebelmovil' COLLATE NOCASE
+                    AND r.login_consolidado = d.LoginConsolidado COLLATE NOCASE
+                    AND r.estado_oc = 'COMPLETADA'
                 )
                 ORDER BY d.FechaRetiro DESC;";
             var lista = (await conexion.QueryAsync<UsuarioDisableDto>(sql)).ToList();
@@ -115,6 +133,12 @@ public class CrucesUserDisable : ICrucesExcel
                        AND t.login_consolidado = d.LoginConsolidado
                        AND DATE(t.fecha_ejecucion) = DATE('now')
                    )
+                   AND NOT EXISTS (
+                       SELECT 1 FROM retiro_app r
+                       WHERE r.app = 'siebelfijo' COLLATE NOCASE
+                       AND r.login_consolidado = d.LoginConsolidado COLLATE NOCASE
+                       AND r.estado_oc = 'COMPLETADA'
+                   )
                 ) x WHERE rn = 1";
             return (await conexion.QueryAsync<UsuarioDisableDto>(sql)).ToList();
         }
@@ -138,6 +162,12 @@ public class CrucesUserDisable : ICrucesExcel
                        AND t.cedula_consolidado = d.CedulaConsolidado
                        AND t.login_consolidado = d.LoginConsolidado
                        AND DATE(t.fecha_ejecucion) = DATE('now')
+                   )
+                   AND NOT EXISTS (
+                       SELECT 1 FROM retiro_app r
+                       WHERE r.app = 'fenix' COLLATE NOCASE
+                       AND r.login_consolidado = d.LoginConsolidado COLLATE NOCASE
+                       AND r.estado_oc = 'COMPLETADA'
                    )
                 ) x WHERE rn = 1";
             return (await conexion.QueryAsync<UsuarioDisableDto>(sql)).ToList();
@@ -163,6 +193,12 @@ public class CrucesUserDisable : ICrucesExcel
                        AND t.login_consolidado = d.LoginConsolidado
                        AND DATE(t.fecha_ejecucion) = DATE('now')
                    )
+                   AND NOT EXISTS (
+                       SELECT 1 FROM retiro_app r
+                       WHERE r.app = 'open' COLLATE NOCASE
+                       AND r.login_consolidado = d.LoginConsolidado COLLATE NOCASE
+                       AND r.estado_oc = 'COMPLETADA'
+                   )
                 ) x WHERE rn = 1";
             return (await conexion.QueryAsync<UsuarioDisableDto>(sql)).ToList();
         }
@@ -186,6 +222,12 @@ public class CrucesUserDisable : ICrucesExcel
                        AND t.cedula_consolidado = d.CedulaConsolidado
                        AND t.login_consolidado = d.LoginConsolidado
                        AND DATE(t.fecha_ejecucion) = DATE('now')
+                   )
+                   AND NOT EXISTS (
+                       SELECT 1 FROM retiro_app r
+                       WHERE r.app = 'dwhmovil' COLLATE NOCASE
+                       AND r.login_consolidado = d.LoginConsolidado COLLATE NOCASE
+                       AND r.estado_oc = 'COMPLETADA'
                    )
                 ) x WHERE rn = 1";
             return (await conexion.QueryAsync<UsuarioDisableDto>(sql)).ToList();
@@ -211,6 +253,12 @@ public class CrucesUserDisable : ICrucesExcel
                        AND t.login_consolidado = d.LoginConsolidado
                        AND DATE(t.fecha_ejecucion) = DATE('now')
                    )
+                   AND NOT EXISTS (
+                       SELECT 1 FROM retiro_app r
+                       WHERE r.app = 'dwhfijo' COLLATE NOCASE
+                       AND r.login_consolidado = d.LoginConsolidado COLLATE NOCASE
+                       AND r.estado_oc = 'COMPLETADA'
+                   )
                 ) x WHERE rn = 1";
             return (await conexion.QueryAsync<UsuarioDisableDto>(sql)).ToList();
         }
@@ -234,6 +282,12 @@ public class CrucesUserDisable : ICrucesExcel
                        AND t.cedula_consolidado = d.CedulaConsolidado
                        AND t.login_consolidado = d.LoginConsolidado
                        AND DATE(t.fecha_ejecucion) = DATE('now')
+                   )
+                   AND NOT EXISTS (
+                       SELECT 1 FROM retiro_app r
+                       WHERE r.app = 'saperp' COLLATE NOCASE
+                       AND r.login_consolidado = d.LoginConsolidado COLLATE NOCASE
+                       AND r.estado_oc = 'COMPLETADA'
                    )
                 ) x WHERE rn = 1";
             return (await conexion.QueryAsync<UsuarioDisableDto>(sql)).ToList();
@@ -259,6 +313,12 @@ public class CrucesUserDisable : ICrucesExcel
                        AND t.login_consolidado = d.LoginConsolidado
                        AND DATE(t.fecha_ejecucion) = DATE('now')
                    )
+                   AND NOT EXISTS (
+                       SELECT 1 FROM retiro_app r
+                       WHERE r.app = 'sapgrc' COLLATE NOCASE
+                       AND r.login_consolidado = d.LoginConsolidado COLLATE NOCASE
+                       AND r.estado_oc = 'COMPLETADA'
+                   )
                 ) x WHERE rn = 1";
             return (await conexion.QueryAsync<UsuarioDisableDto>(sql)).ToList();
         }
@@ -282,6 +342,12 @@ public class CrucesUserDisable : ICrucesExcel
                        AND t.cedula_consolidado = d.CedulaConsolidado
                        AND t.login_consolidado = d.LoginConsolidado
                        AND DATE(t.fecha_ejecucion) = DATE('now')
+                   )
+                   AND NOT EXISTS (
+                       SELECT 1 FROM retiro_app r
+                       WHERE r.app = 'iam' COLLATE NOCASE
+                       AND r.login_consolidado = d.LoginConsolidado COLLATE NOCASE
+                       AND r.estado_oc = 'COMPLETADA'
                    )
                 ) x WHERE rn = 1";
             return (await conexion.QueryAsync<UsuarioDisableDto>(sql)).ToList();
@@ -308,6 +374,12 @@ public class CrucesUserDisable : ICrucesExcel
                        AND COALESCE(t.tipo_cruce,'') = COALESCE(d.TipoCruce,'')
                        AND DATE(t.fecha_ejecucion) = DATE('now')
                    )
+                   AND NOT EXISTS (
+                       SELECT 1 FROM retiro_app r
+                       WHERE r.app = 'cbs' COLLATE NOCASE
+                       AND r.login_consolidado = d.LoginConsolidado COLLATE NOCASE
+                       AND r.estado_oc = 'COMPLETADA'
+                   )
                 ) x WHERE rn = 1";
             return (await conexion.QueryAsync<UsuarioDisableDto>(sql)).ToList();
         }
@@ -332,6 +404,12 @@ public class CrucesUserDisable : ICrucesExcel
                        AND COALESCE(t.login_app,'') = COALESCE(d.LoginApp,'')
                        AND COALESCE(t.tipo_cruce,'') = COALESCE(d.TipoCruce,'')
                        AND DATE(t.fecha_ejecucion) = DATE('now')
+                   )
+                   AND NOT EXISTS (
+                       SELECT 1 FROM retiro_app r
+                       WHERE r.app = 'cm' COLLATE NOCASE
+                       AND r.login_consolidado = d.LoginConsolidado COLLATE NOCASE
+                       AND r.estado_oc = 'COMPLETADA'
                    )
                 ) x WHERE rn = 1";
             return (await conexion.QueryAsync<UsuarioDisableDto>(sql)).ToList();
@@ -358,6 +436,12 @@ public class CrucesUserDisable : ICrucesExcel
                        AND COALESCE(t.tipo_cruce,'') = COALESCE(d.TipoCruce,'')
                        AND DATE(t.fecha_ejecucion) = DATE('now')
                    )
+                   AND NOT EXISTS (
+                       SELECT 1 FROM retiro_app r
+                       WHERE r.app = 'elk' COLLATE NOCASE
+                       AND r.login_consolidado = d.LoginConsolidado COLLATE NOCASE
+                       AND r.estado_oc = 'COMPLETADA'
+                   )
                 ) x WHERE rn = 1";
             return (await conexion.QueryAsync<UsuarioDisableDto>(sql)).ToList();
         }
@@ -383,6 +467,12 @@ public class CrucesUserDisable : ICrucesExcel
                        AND COALESCE(t.tipo_cruce,'') = COALESCE(d.TipoCruce,'')
                        AND DATE(t.fecha_ejecucion) = DATE('now')
                    )
+                   AND NOT EXISTS (
+                       SELECT 1 FROM retiro_app r
+                       WHERE r.app = 'pcrf' COLLATE NOCASE
+                       AND r.login_consolidado = d.LoginConsolidado COLLATE NOCASE
+                       AND r.estado_oc = 'COMPLETADA'
+                   )
                 ) x WHERE rn = 1";
             return (await conexion.QueryAsync<UsuarioDisableDto>(sql)).ToList();
         }
@@ -407,6 +497,12 @@ public class CrucesUserDisable : ICrucesExcel
                        AND COALESCE(t.login_app,'') = COALESCE(d.LoginApp,'')
                        AND COALESCE(t.tipo_cruce,'') = COALESCE(d.TipoCruce,'')
                        AND DATE(t.fecha_ejecucion) = DATE('now')
+                   )
+                   AND NOT EXISTS (
+                       SELECT 1 FROM retiro_app r
+                       WHERE r.app = 'bigdata' COLLATE NOCASE
+                       AND r.login_consolidado = d.LoginConsolidado COLLATE NOCASE
+                       AND r.estado_oc = 'COMPLETADA'
                    )
                 ) x WHERE rn = 1";
             return (await conexion.QueryAsync<UsuarioDisableDto>(sql)).ToList();
@@ -666,7 +762,7 @@ public class CrucesUserDisable : ICrucesExcel
         FROM consolidado c
         INNER JOIN iam i ON i.Login_ID = c.login COLLATE NOCASE
         WHERE i.Estado_de_la_Identidad = 'Habilitado' COLLATE NOCASE
-          AND i.ESTADO = '1' COLLATE NOCASE
+          AND i.Estado_Sistema = '1' COLLATE NOCASE
           AND c.estado_entidad NOT IN ('Habilitado', 'Habilitado.') COLLATE NOCASE
           AND c.estado_entidad IS NOT NULL
         UNION ALL
@@ -679,7 +775,7 @@ public class CrucesUserDisable : ICrucesExcel
         FROM consolidado c
         INNER JOIN iam i ON i.Numero_de_identificacion = c.cedula COLLATE NOCASE
         WHERE i.Estado_de_la_Identidad = 'Habilitado' COLLATE NOCASE
-          AND i.ESTADO = '1' COLLATE NOCASE
+          AND i.Estado_Sistema = '1' COLLATE NOCASE
           AND c.estado_entidad NOT IN ('Habilitado', 'Habilitado.') COLLATE NOCASE
           AND c.estado_entidad IS NOT NULL
           AND (i.Login_ID <> c.login OR i.Login_ID IS NULL OR c.login IS NULL)";

@@ -1,0 +1,693 @@
+@page "/uam3/reportes"
+@using Dapper
+@using BaseDatoSqLite.Conexion
+@using Shared.CapaAplicacion.UserDisable
+@using Radzen
+@using Radzen.Blazor
+@inject ConnectionFactory ConnectionFactory
+@inject NotificationService NotificationService
+@inject DialogService DialogService
+
+<PageTitle>Uam3 - Reportes</PageTitle>
+
+<style>
+    .rp-title {
+        font-size: 22px;
+        font-weight: 800;
+        color: #fff;
+        margin-bottom: 4px;
+    }
+
+    .rp-breadcrumb {
+        font-size: 12px;
+        color: #6b7280;
+        margin-bottom: 20px;
+    }
+
+    /* FILTROS */
+    .rp-filters {
+        background: #1a1d27;
+        border: 1px solid #2d3148;
+        border-radius: 12px;
+        padding: 16px 20px;
+        margin-bottom: 20px;
+        display: flex;
+        gap: 16px;
+        align-items: flex-end;
+        flex-wrap: wrap;
+    }
+
+    .rp-filter-group {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    .rp-filter-label {
+        font-size: 11px;
+        color: #6b7280;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    /* STATS */
+    .rp-stats {
+        display: grid;
+        grid-template-columns: repeat(4,1fr);
+        gap: 12px;
+        margin-bottom: 20px;
+    }
+
+    .rp-stat {
+        background: #1a1d27;
+        border: 1px solid #2d3148;
+        border-radius: 10px;
+        padding: 14px 16px;
+    }
+
+    .rp-stat-label {
+        font-size: 11px;
+        color: #6b7280;
+        font-weight: 600;
+        text-transform: uppercase;
+        margin-bottom: 4px;
+    }
+
+    .rp-stat-value {
+        font-size: 24px;
+        font-weight: 800;
+        color: #e2e8f0;
+    }
+
+    .rp-stat-sub {
+        font-size: 11px;
+        color: #4b5563;
+        margin-top: 2px;
+    }
+
+    /* GRID */
+    .rp-grid-card {
+        background: #1a1d27;
+        border: 1px solid #2d3148;
+        border-radius: 12px;
+        overflow: hidden;
+    }
+
+    .rp-grid-hdr {
+        padding: 14px 20px;
+        border-bottom: 1px solid #2d3148;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    .rp-grid-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: #e2e8f0;
+    }
+
+    .rp-count {
+        background: rgba(34,197,94,.12);
+        color: #22c55e;
+        font-size: 11px;
+        padding: 2px 10px;
+        border-radius: 20px;
+        font-weight: 700;
+        border: 1px solid rgba(34,197,94,.2);
+    }
+
+    /* DATAGRID DARK */
+    .rp-grid-card .rz-data-grid {
+        background: #1a1d27 !important;
+        border: none !important;
+    }
+
+    .rp-grid-card .rz-column-header {
+        background: #13151f !important;
+        color: #6b7280 !important;
+        font-size: 11px !important;
+        font-weight: 600 !important;
+        text-transform: uppercase !important;
+        border-color: #2d3148 !important;
+    }
+
+    .rp-grid-card .rz-column-header-title {
+        color: #6b7280 !important;
+    }
+
+    .rp-grid-card .rz-data-row td {
+        background: #1a1d27 !important;
+        color: #d1d5db !important;
+        border-color: #1e2035 !important;
+        font-size: 12px !important;
+    }
+
+    .rp-grid-card .rz-data-row:hover td {
+        background: #1e2035 !important;
+    }
+
+    .rp-grid-card .rz-paginator {
+        background: #1a1d27 !important;
+        border-top: 1px solid #2d3148 !important;
+        color: #6b7280 !important;
+    }
+
+        .rp-grid-card .rz-paginator .rz-paginator-element {
+            background: #13151f !important;
+            border: 1px solid #2d3148 !important;
+            color: #9ca3af !important;
+            border-radius: 6px !important;
+        }
+
+        .rp-grid-card .rz-paginator .rz-state-highlight {
+            background: #6366f1 !important;
+            border-color: #6366f1 !important;
+            color: #fff !important;
+        }
+
+    /* MODAL DARK */
+    .rz-dialog {
+        background: #1a1d27 !important;
+        border: 1px solid #2d3148 !important;
+    }
+
+    .rz-dialog-title {
+        color: #e2e8f0 !important;
+    }
+
+    .rz-dialog-content {
+        background: #1a1d27 !important;
+    }
+
+    .rz-textbox, .rz-dropdown {
+        background: #13151f !important;
+        border: 1px solid #2d3148 !important;
+        color: #e2e8f0 !important;
+        border-radius: 8px !important;
+    }
+
+    .rz-label {
+        color: #9ca3af !important;
+        font-size: 12px !important;
+    }
+</style>
+
+<div class="rp-title">Histórico de Retiros APP</div>
+<div class="rp-breadcrumb">UAM3 / Capa Aplicación / Reportes</div>
+
+<!-- FILTROS -->
+<div class="rp-filters">
+    <div class="rp-filter-group">
+        <span class="rp-filter-label">Sistema</span>
+        <RadzenDropDown Data="@listaApps" @bind-Value="filtroApp"
+                        Placeholder="Todos" AllowClear="true"
+                        Style="width:160px;" Change="@AplicarFiltros" />
+    </div>
+    <div class="rp-filter-group">
+        <span class="rp-filter-label">Estado OC</span>
+        <RadzenDropDown Data="@listaEstados" @bind-Value="filtroEstadoOc"
+                        Placeholder="Todos" AllowClear="true"
+                        Style="width:160px;" Change="@AplicarFiltros" />
+    </div>
+    <div class="rp-filter-group">
+        <span class="rp-filter-label">Desde</span>
+        <RadzenDatePicker @bind-Value="filtroFechaDesde" DateFormat="dd/MM/yyyy"
+                          Style="width:150px;" Change="@AplicarFiltros" />
+    </div>
+    <div class="rp-filter-group">
+        <span class="rp-filter-label">Hasta</span>
+        <RadzenDatePicker @bind-Value="filtroFechaHasta" DateFormat="dd/MM/yyyy"
+                          Style="width:150px;" Change="@AplicarFiltros" />
+    </div>
+    <div class="rp-filter-group">
+        <span class="rp-filter-label">Buscar</span>
+        <RadzenTextBox @bind-Value="filtroBusqueda" Placeholder="Login / Cédula / Nombre..."
+                       Style="width:220px;" @oninput="OnBusquedaChange" />
+    </div>
+    <RadzenButton Text="Limpiar" Icon="clear" ButtonStyle="ButtonStyle.Light"
+                  Size="ButtonSize.Small" Click="LimpiarFiltros" />
+    <RadzenButton Text="@(isLoading ? "Cargando..." : "Actualizar")"
+                  Icon="refresh" ButtonStyle="ButtonStyle.Primary"
+                  Size="ButtonSize.Small" Click="CargarDatos" Disabled="@isLoading" />
+</div>
+
+<!-- STATS -->
+<div class="rp-stats">
+    <div class="rp-stat">
+        <div class="rp-stat-label">Total Registros</div>
+        <div class="rp-stat-value">@datosFiltrados?.Count()</div>
+        <div class="rp-stat-sub">en retiro_app</div>
+    </div>
+    <div class="rp-stat">
+        <div class="rp-stat-label">Completadas</div>
+        <div class="rp-stat-value" style="color:#22c55e;">@datosFiltrados?.Count(x => x.EstadoOc?.ToUpper() == "COMPLETADA")</div>
+        <div class="rp-stat-sub">OC completadas</div>
+    </div>
+    <div class="rp-stat">
+        <div class="rp-stat-label">Pendientes</div>
+        <div class="rp-stat-value" style="color:#f59e0b;">@datosFiltrados?.Count(x => x.EstadoOc?.ToUpper() == "PENDIENTE")</div>
+        <div class="rp-stat-sub">OC pendientes</div>
+    </div>
+    <div class="rp-stat">
+        <div class="rp-stat-label">Sin OC</div>
+        <div class="rp-stat-value" style="color:#ef4444;">@datosFiltrados?.Count(x => string.IsNullOrEmpty(x.NumeroOc))</div>
+        <div class="rp-stat-sub">sin número OC</div>
+    </div>
+</div>
+
+<!-- GRID -->
+<div class="rp-grid-card">
+    <div class="rp-grid-hdr">
+        <span class="rp-grid-title">Registros Históricos</span>
+        <span class="rp-count">@(datosFiltrados?.Count() ?? 0) registros</span>
+    </div>
+
+    @if (isLoading)
+    {
+        <div style="padding:32px;text-align:center;">
+            <RadzenProgressBar Value="100" ShowValue="false" Mode="ProgressBarMode.Indeterminate" Style="width:300px;margin:0 auto;" />
+        </div>
+    }
+    else
+    {
+        <RadzenDataGrid Data="@datosFiltrados" TItem="RetirosUserApp"
+                        AllowFiltering="false" AllowSorting="true" AllowPaging="true"
+                        PageSize="20" AllowColumnResize="true" Density="Density.Compact"
+                        EmptyText="No hay registros para mostrar">
+            <Columns>
+                <RadzenDataGridColumn TItem="RetirosUserApp" Property="FechaEjecucion" Title="Fecha Ejec." Width="110px" Sortable="true">
+                    <Template Context="r">@r.FechaEjecucion.ToString("dd/MM/yyyy")</Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="RetirosUserApp" Property="App" Title="Sistema" Width="90px" Sortable="true">
+                    <Template Context="r">
+                        <RadzenBadge Text="@r.App?.ToUpper()" BadgeStyle="BadgeStyle.Info" Variant="Variant.Flat" />
+                    </Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="RetirosUserApp" Property="CedulaConsolidado" Title="Cédula" Width="110px" Sortable="true" />
+                <RadzenDataGridColumn TItem="RetirosUserApp" Property="LoginConsolidado" Title="Login Consol." Width="130px" Sortable="true" />
+                <RadzenDataGridColumn TItem="RetirosUserApp" Property="LoginApp" Title="Login App" Width="130px" Sortable="true" />
+                <RadzenDataGridColumn TItem="RetirosUserApp" Property="NombreConsolidado" Title="Nombre" Width="180px" Sortable="true" />
+                <RadzenDataGridColumn TItem="RetirosUserApp" Property="FechaRetiro" Title="F. Retiro" Width="100px" Sortable="true" />
+                <RadzenDataGridColumn TItem="RetirosUserApp" Property="TipoCruce" Title="Cruce" Width="70px" Sortable="true" />
+                <RadzenDataGridColumn TItem="RetirosUserApp" Property="NumeroOc" Title="N° OC" Width="110px" Sortable="true">
+                    <Template Context="r">
+                        @if (!string.IsNullOrEmpty(r.NumeroOc))
+                        {
+                            <span style="color:#a5b4fc;font-weight:600;">@r.NumeroOc</span>
+                        }
+                        else
+                        {
+                            <span style="color:#4b5563;">—</span>
+                        }
+                    </Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="RetirosUserApp" Property="FechaOc" Title="F. OC" Width="100px" Sortable="true" />
+                <RadzenDataGridColumn TItem="RetirosUserApp" Property="EstadoOc" Title="Estado OC" Width="110px" Sortable="true">
+                    <Template Context="r">
+                        @if (!string.IsNullOrEmpty(r.EstadoOc))
+                        {
+                            <RadzenBadge Text="@r.EstadoOc" BadgeStyle="@GetBadgeStyle(r.EstadoOc)" Variant="Variant.Flat" />
+                        }
+                        else
+                        {
+                            <span style="color:#4b5563;">—</span>
+                        }
+                    </Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="RetirosUserApp" Title="Acciones" Width="120px" Sortable="false">
+                    <Template Context="r">
+                        <div style="display:flex;gap:4px;">
+                            <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Warning"
+                                          Size="ButtonSize.ExtraSmall" Variant="Variant.Flat"
+                                          Click="@(() => AbrirEditar(r))"
+                                          title="Editar OC" />
+                            <RadzenButton Icon="content_copy" ButtonStyle="ButtonStyle.Secondary"
+                                          Size="ButtonSize.ExtraSmall" Variant="Variant.Flat"
+                                          Click="@(() => AbrirDuplicar(r))"
+                                          title="Duplicar — nueva OC para este usuario" />
+                        </div>
+                    </Template>
+                </RadzenDataGridColumn>
+            </Columns>
+        </RadzenDataGrid>
+    }
+</div>
+
+<!-- MODAL EDITAR -->
+@if (mostrarModalEditar && registroEditando != null)
+{
+    <RadzenDialog>
+    </RadzenDialog>
+    <div style="position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:2000;display:flex;align-items:center;justify-content:center;">
+        <div style="background:#1a1d27;border:1px solid #2d3148;border-radius:14px;padding:28px;width:480px;max-width:95vw;">
+            <div style="font-size:16px;font-weight:700;color:#e2e8f0;margin-bottom:4px;">Editar OC</div>
+            <div style="font-size:12px;color:#6b7280;margin-bottom:20px;">
+                @registroEditando.NombreConsolidado — @registroEditando.App?.ToUpper()
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:14px;">
+                <div>
+                    <div style="font-size:11px;color:#6b7280;font-weight:600;margin-bottom:5px;">NÚMERO OC</div>
+                    <RadzenTextBox @bind-Value="editNumeroOc" Placeholder="Número de OC"
+                                   Style="width:100%;background:#13151f;border:1px solid #2d3148;color:#e2e8f0;" />
+                </div>
+                <div>
+                    <div style="font-size:11px;color:#6b7280;font-weight:600;margin-bottom:5px;">FECHA OC</div>
+                    <RadzenTextBox @bind-Value="editFechaOc" Placeholder="yyyy-MM-dd"
+                                   Style="width:100%;background:#13151f;border:1px solid #2d3148;color:#e2e8f0;" />
+                </div>
+                <div>
+                    <div style="font-size:11px;color:#6b7280;font-weight:600;margin-bottom:5px;">ESTADO OC</div>
+                    <RadzenDropDown Data="@listaEstadosEditar" @bind-Value="editEstadoOc"
+                                    Style="width:100%;background:#13151f;border:1px solid #2d3148;color:#e2e8f0;" />
+                </div>
+            </div>
+
+            <div style="display:flex;gap:10px;margin-top:24px;justify-content:flex-end;">
+                <RadzenButton Text="Cancelar" ButtonStyle="ButtonStyle.Light"
+                              Click="@(() => mostrarModalEditar = false)" />
+                <RadzenButton Text="@(guardando ? "Guardando..." : "Guardar")"
+                              ButtonStyle="ButtonStyle.Success" Icon="save"
+                              Click="GuardarEdicion" Disabled="@guardando" />
+            </div>
+        </div>
+    </div>
+}
+
+<!-- MODAL DUPLICAR -->
+@if (mostrarModalDuplicar && registroDuplicando != null)
+{
+    <div style="position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:2000;display:flex;align-items:center;justify-content:center;">
+        <div style="background:#1a1d27;border:1px solid #2d3148;border-radius:14px;padding:28px;width:480px;max-width:95vw;">
+            <div style="font-size:16px;font-weight:700;color:#e2e8f0;margin-bottom:4px;">Nueva OC — Mismo Usuario</div>
+            <div style="font-size:12px;color:#6b7280;margin-bottom:6px;">
+                @registroDuplicando.NombreConsolidado — @registroDuplicando.App?.ToUpper()
+            </div>
+            <RadzenAlert Severity="AlertSeverity.Warning" AllowClose="false" Variant="Variant.Flat" Size="AlertSize.ExtraSmall" Style="margin-bottom:16px;">
+                Se creará un nuevo registro con una nueva OC. El registro original se conserva.
+            </RadzenAlert>
+
+            <div style="display:flex;flex-direction:column;gap:14px;">
+                <div>
+                    <div style="font-size:11px;color:#6b7280;font-weight:600;margin-bottom:5px;">NÚMERO OC</div>
+                    <RadzenTextBox @bind-Value="dupNumeroOc" Placeholder="Número de nueva OC"
+                                   Style="width:100%;background:#13151f;border:1px solid #2d3148;color:#e2e8f0;" />
+                </div>
+                <div>
+                    <div style="font-size:11px;color:#6b7280;font-weight:600;margin-bottom:5px;">FECHA OC</div>
+                    <RadzenTextBox @bind-Value="dupFechaOc" Placeholder="yyyy-MM-dd"
+                                   Style="width:100%;background:#13151f;border:1px solid #2d3148;color:#e2e8f0;" />
+                </div>
+                <div>
+                    <div style="font-size:11px;color:#6b7280;font-weight:600;margin-bottom:5px;">ESTADO OC</div>
+                    <RadzenDropDown Data="@listaEstadosEditar" @bind-Value="dupEstadoOc"
+                                    Style="width:100%;background:#13151f;border:1px solid #2d3148;color:#e2e8f0;" />
+                </div>
+            </div>
+
+            <div style="display:flex;gap:10px;margin-top:24px;justify-content:flex-end;">
+                <RadzenButton Text="Cancelar" ButtonStyle="ButtonStyle.Light"
+                              Click="@(() => mostrarModalDuplicar = false)" />
+                <RadzenButton Text="@(guardando ? "Guardando..." : "Crear Registro")"
+                              ButtonStyle="ButtonStyle.Success" Icon="content_copy"
+                              Click="GuardarDuplicar" Disabled="@guardando" />
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private bool isLoading = false;
+    private bool guardando = false;
+    private bool mostrarModalEditar = false;
+    private bool mostrarModalDuplicar = false;
+
+    private IEnumerable<RetirosUserApp>? todosLosDatos;
+    private IEnumerable<RetirosUserApp>? datosFiltrados;
+
+    // Filtros
+    private string? filtroApp;
+    private string? filtroEstadoOc;
+    private DateTime? filtroFechaDesde;
+    private DateTime? filtroFechaHasta;
+    private string filtroBusqueda = "";
+
+    // Editar
+    private RetirosUserApp? registroEditando;
+    private string editNumeroOc = "";
+    private string editFechaOc = "";
+    private string editEstadoOc = "";
+
+    // Duplicar
+    private RetirosUserApp? registroDuplicando;
+    private string dupNumeroOc = "";
+    private string dupFechaOc = "";
+    private string dupEstadoOc = "PENDIENTE";
+
+    private List<string> listaApps = new() { "portal", "da", "siebelmovil", "siebelfijo", "fenix", "open", "dwhmovil", "dwhfijo", "saperp", "sapgrc", "iam", "cbs", "cm", "elk", "pcrf", "bigdata" };
+    private List<string> listaEstados = new() { "PENDIENTE", "EN_PROCESO", "APROBADA", "COMPLETADA", "RECHAZADA" };
+    private List<string> listaEstadosEditar = new() { "PENDIENTE", "EN_PROCESO", "APROBADA", "COMPLETADA", "RECHAZADA" };
+
+    protected override async Task OnInitializedAsync() => await CargarDatos();
+
+    private async Task CargarDatos()
+    {
+        isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            using var connection = ConnectionFactory.CreateConnection();
+            await connection.OpenAsync();
+
+            var sql = @"
+                SELECT
+                    id_retiro_app       AS Id_RetiroApp,
+                    fecha_ejecucion     AS FechaEjecucion,
+                    app                 AS App,
+                    cedula_app          AS CedulaApp,
+                    cedula_consolidado  AS CedulaConsolidado,
+                    login_consolidado   AS LoginConsolidado,
+                    login_app           AS LoginApp,
+                    nombre_consolidado  AS NombreConsolidado,
+                    estado_app          AS EstadoApp,
+                    estado_consolidado  AS EstadoConsolidado,
+                    fecha_retiro        AS FechaRetiro,
+                    tipo_cruce          AS TipoCruce,
+                    numero_oc           AS NumeroOc,
+                    fecha_oc            AS FechaOc,
+                    estado_oc           AS EstadoOc,
+                    validacion_estado   AS ValidacionEstado
+                FROM retiro_app
+                ORDER BY fecha_ejecucion DESC, app";
+
+            todosLosDatos = (await connection.QueryAsync<RetirosUserApp>(sql)).ToList();
+            AplicarFiltros();
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Summary = "Error",
+                Detail = $"Error al cargar datos: {ex.Message}",
+                Duration = 8000
+            });
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void AplicarFiltros()
+    {
+        if (todosLosDatos == null) { datosFiltrados = null; return; }
+
+        var q = todosLosDatos.AsEnumerable();
+
+        if (!string.IsNullOrEmpty(filtroApp))
+            q = q.Where(x => x.App?.Equals(filtroApp, StringComparison.OrdinalIgnoreCase) == true);
+
+        if (!string.IsNullOrEmpty(filtroEstadoOc))
+            q = q.Where(x => x.EstadoOc?.Equals(filtroEstadoOc, StringComparison.OrdinalIgnoreCase) == true);
+
+        if (filtroFechaDesde.HasValue)
+            q = q.Where(x => x.FechaEjecucion >= filtroFechaDesde.Value);
+
+        if (filtroFechaHasta.HasValue)
+            q = q.Where(x => x.FechaEjecucion <= filtroFechaHasta.Value.AddDays(1));
+
+        if (!string.IsNullOrWhiteSpace(filtroBusqueda))
+        {
+            var term = filtroBusqueda.Trim().ToLower();
+            q = q.Where(x =>
+                (x.LoginConsolidado?.ToLower().Contains(term) == true) ||
+                (x.LoginApp?.ToLower().Contains(term) == true) ||
+                (x.CedulaConsolidado?.ToLower().Contains(term) == true) ||
+                (x.NombreConsolidado?.ToLower().Contains(term) == true) ||
+                (x.NumeroOc?.ToLower().Contains(term) == true));
+        }
+
+        datosFiltrados = q.ToList();
+        StateHasChanged();
+    }
+
+    private void OnBusquedaChange(ChangeEventArgs e)
+    {
+        filtroBusqueda = e.Value?.ToString() ?? "";
+        AplicarFiltros();
+    }
+
+    private void LimpiarFiltros()
+    {
+        filtroApp = null; filtroEstadoOc = null;
+        filtroFechaDesde = null; filtroFechaHasta = null;
+        filtroBusqueda = "";
+        AplicarFiltros();
+    }
+
+    private void AbrirEditar(RetirosUserApp r)
+    {
+        registroEditando = r;
+        editNumeroOc = r.NumeroOc ?? "";
+        editFechaOc = r.FechaOc ?? "";
+        editEstadoOc = r.EstadoOc ?? "PENDIENTE";
+        mostrarModalEditar = true;
+    }
+
+    private async Task GuardarEdicion()
+    {
+        if (registroEditando == null) return;
+        guardando = true;
+
+        try
+        {
+            using var connection = ConnectionFactory.CreateConnection();
+            await connection.OpenAsync();
+
+            var sql = @"
+                UPDATE retiro_app
+                SET numero_oc = @NumeroOc,
+                    fecha_oc  = @FechaOc,
+                    estado_oc = @EstadoOc
+                WHERE id_retiro_app = @Id";
+
+            await connection.ExecuteAsync(sql, new
+            {
+                NumeroOc = editNumeroOc,
+                FechaOc = editFechaOc,
+                EstadoOc = editEstadoOc,
+                Id = registroEditando.Id_RetiroApp
+            });
+
+            mostrarModalEditar = false;
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Success,
+                Summary = "Guardado",
+                Detail = "OC actualizada correctamente.",
+                Duration = 4000
+            });
+            await CargarDatos();
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Summary = "Error",
+                Detail = ex.Message,
+                Duration = 8000
+            });
+        }
+        finally { guardando = false; }
+    }
+
+    private void AbrirDuplicar(RetirosUserApp r)
+    {
+        registroDuplicando = r;
+        dupNumeroOc = "";
+        dupFechaOc = DateTime.Now.ToString("yyyy-MM-dd");
+        dupEstadoOc = "PENDIENTE";
+        mostrarModalDuplicar = true;
+    }
+
+    private async Task GuardarDuplicar()
+    {
+        if (registroDuplicando == null) return;
+        guardando = true;
+
+        try
+        {
+            using var connection = ConnectionFactory.CreateConnection();
+            await connection.OpenAsync();
+
+            var sql = @"
+                INSERT INTO retiro_app (
+                    fecha_ejecucion, app, cedula_app, cedula_consolidado,
+                    login_consolidado, login_app, nombre_consolidado,
+                    estado_app, estado_consolidado, fecha_retiro,
+                    tipo_cruce, numero_oc, fecha_oc, estado_oc, validacion_estado
+                ) VALUES (
+                    @FechaEjecucion, @App, @CedulaApp, @CedulaConsolidado,
+                    @LoginConsolidado, @LoginApp, @NombreConsolidado,
+                    @EstadoApp, @EstadoConsolidado, @FechaRetiro,
+                    @TipoCruce, @NumeroOc, @FechaOc, @EstadoOc, NULL
+                )";
+
+            await connection.ExecuteAsync(sql, new
+            {
+                FechaEjecucion = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+                registroDuplicando.App,
+                registroDuplicando.CedulaApp,
+                registroDuplicando.CedulaConsolidado,
+                registroDuplicando.LoginConsolidado,
+                registroDuplicando.LoginApp,
+                registroDuplicando.NombreConsolidado,
+                registroDuplicando.EstadoApp,
+                registroDuplicando.EstadoConsolidado,
+                registroDuplicando.FechaRetiro,
+                registroDuplicando.TipoCruce,
+                NumeroOc = dupNumeroOc,
+                FechaOc = dupFechaOc,
+                EstadoOc = dupEstadoOc
+            });
+
+            mostrarModalDuplicar = false;
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Success,
+                Summary = "Registro Creado",
+                Detail = "Nuevo registro con nueva OC creado correctamente.",
+                Duration = 4000
+            });
+            await CargarDatos();
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Summary = "Error",
+                Detail = ex.Message,
+                Duration = 8000
+            });
+        }
+        finally { guardando = false; }
+    }
+
+    private BadgeStyle GetBadgeStyle(string estado) => estado?.ToUpper() switch
+    {
+        "COMPLETADA" => BadgeStyle.Success,
+        "APROBADA" => BadgeStyle.Success,
+        "EN_PROCESO" => BadgeStyle.Info,
+        "PENDIENTE" => BadgeStyle.Warning,
+        "RECHAZADA" => BadgeStyle.Danger,
+        _ => BadgeStyle.Secondary
+    };
+}

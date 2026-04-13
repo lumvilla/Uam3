@@ -7,14 +7,11 @@ namespace Data.Repository.CapaAPP.ServiceDesk;
 
 public class RetirosAppService : IRetirosAppService
 {
-
     private readonly ConnectionFactory _factory;
 
-    public RetirosAppService(ConnectionFactory factory)
-    {
-        _factory = factory;
-    }
+    public RetirosAppService(ConnectionFactory factory) => _factory = factory;
 
+    // ── Obtener datos temporales ──────────────────────────────────────
     public async Task<IEnumerable<RetirosUserApp>> ObtenerDatosTemporales()
     {
         using var connection = _factory.CreateConnection();
@@ -22,30 +19,30 @@ public class RetirosAppService : IRetirosAppService
 
         var sql = @"
             SELECT 
-                id_retiro_app AS IdRetiroApp,
-                fecha_ejecucion AS FechaEjecucion,
-                app AS App,
-                cedula_app AS CedulaApp,
-                cedula_consolidado AS CedulaConsolidado,
-                login_consolidado AS LoginConsolidado,
-                login_app AS LoginApp,
-                nombre_consolidado AS NombreConsolidado,
-                estado_app AS EstadoApp,
-                estado_consolidado AS EstadoConsolidado,
-                fecha_retiro AS FechaRetiro,
-                tipo_cruce AS TipoCruce,
-                numero_oc AS NumeroOc,
-                fecha_oc AS FechaOc,
-                estado_oc AS EstadoOc,
-                validacion_estado AS ValidacionEstado
+                id_retiro_app       AS Id_RetiroApp,
+                fecha_ejecucion     AS FechaEjecucion,
+                app                 AS App,
+                cedula_app          AS CedulaApp,
+                cedula_consolidado  AS CedulaConsolidado,
+                login_consolidado   AS LoginConsolidado,
+                login_app           AS LoginApp,
+                nombre_consolidado  AS NombreConsolidado,
+                estado_app          AS EstadoApp,
+                estado_consolidado  AS EstadoConsolidado,
+                fecha_retiro        AS FechaRetiro,
+                tipo_cruce          AS TipoCruce,
+                numero_oc           AS NumeroOc,
+                fecha_oc            AS FechaOc,
+                estado_oc           AS EstadoOc,
+                validacion_estado   AS ValidacionEstado
             FROM retiro_app_temp
             ORDER BY app, fecha_retiro DESC";
 
-        var result = await connection.QueryAsync<RetirosUserApp>(sql);
-        return result;
+        return await connection.QueryAsync<RetirosUserApp>(sql);
     }
 
-    public async Task<bool> GenerarOrdenCambio(string app, string Fecha)
+    // ── Generar OC: marca como PENDIENTE (el robot o usuario asigna el número luego) ──
+    public async Task<bool> GenerarOrdenCambio(string app, string fecha)
     {
         using var connection = _factory.CreateConnection();
         await connection.OpenAsync();
@@ -53,79 +50,67 @@ public class RetirosAppService : IRetirosAppService
 
         try
         {
-            var countSql = "SELECT COUNT(*) FROM retiro_app_temp";
-            var count = await connection.ExecuteScalarAsync<int>(countSql, transaction: transaction);
+            // Verificar que hay registros para esa app y fecha
+            var countSql = @"
+                SELECT COUNT(*) FROM retiro_app_temp
+                WHERE app = @App COLLATE NOCASE
+                  AND DATE(fecha_ejecucion) = DATE(@Fecha)
+                  AND (estado_oc IS NULL OR estado_oc = '')";
+
+            var count = await connection.ExecuteScalarAsync<int>(countSql,
+                new { App = app, Fecha = fecha }, transaction);
 
             if (count == 0)
+            {
+                transaction.Rollback();
                 return false;
+            }
 
-            var numeroOc = GenerarNumeroOC();
-            var fechaOc = DateTime.Now;
+            // Marcar como PENDIENTE — el número de OC lo asigna el robot o CargaManualOc
+            var updateSql = @"
+                UPDATE retiro_app_temp
+                SET estado_oc = 'PENDIENTE'
+                WHERE app = @App COLLATE NOCASE
+                  AND DATE(fecha_ejecucion) = DATE(@Fecha)
+                  AND (estado_oc IS NULL OR estado_oc = '')";
 
-            var createTableSql = @"
-                select * from retiro_apps
-                )";
-
-            await connection.ExecuteAsync(createTableSql, transaction: transaction);
-
-            var insertSql = @"
-                INSERT INTO retiro_apps (
-                    fecha_ejecucion, app, cedula_app, cedula_consolidado, login_consolidado, 
-                    login_app, nombre_consolidado, estado_app, estado_consolidado, fecha_retiro, 
-                    tipo_cruce, numero_oc, fecha_oc, estado_oc, validacion_estado
-                )
-                SELECT 
-                    fecha_ejecucion, app, cedula_app, cedula_consolidado, login_consolidado, 
-                    login_app, nombre_consolidado, estado_app, estado_consolidado, fecha_retiro, 
-                    tipo_cruce, @NumeroOc, @FechaOc, 'PENDIENTE', NULL
-                FROM retiro_app_temp";
-
-            await connection.ExecuteAsync(insertSql, new { NumeroOc = numeroOc, FechaOc = fechaOc.ToString("yyyy-MM-dd") }, transaction);
-
-            var deleteSql = $"DELETE FROM retiro_app_temp where app = {app}";
-            await connection.ExecuteAsync(deleteSql, transaction: transaction);
+            await connection.ExecuteAsync(updateSql,
+                new { App = app, Fecha = fecha }, transaction);
 
             transaction.Commit();
             return true;
         }
-        catch (Exception)
+        catch
         {
             transaction.Rollback();
             throw;
         }
     }
 
-    private string GenerarNumeroOC()
-    {
-        // este metodo lo hare para selenium
-        var ahora = DateTime.Now;
-        return $"OC-{ahora:yyyyMMdd}-{ahora:HHmmss}";
-    }
-
-
+    // ── Guardar OC Manual: asigna número OC y mueve a histórico ──────
     public async Task<bool> GuardarOCManual(
-     string app,
-     string fechaSeleccionada,
-     string numeroOc,
-     string estadoOc,
-     string fechaOC)
+        string app,
+        string fechaSeleccionada,
+        string numeroOc,
+        string estadoOc,
+        string fechaOC)
     {
         using var connection = _factory.CreateConnection();
         await connection.OpenAsync();
-
         using var transaction = connection.BeginTransaction();
 
         try
         {
-            var updateTempSql = @"
-            UPDATE retiro_app_temp
-            SET numero_oc = @NumeroOc,
-                estado_oc = @EstadoOc,
-                fecha_oc = @FechaOc
-            WHERE app = @App
-              AND fecha_retiro = @FechaSeleccionada";
+            // 1. Actualizar numero_oc, estado_oc y fecha_oc en temp
+            var updateSql = @"
+                UPDATE retiro_app_temp
+                SET numero_oc = @NumeroOc,
+                    estado_oc = @EstadoOc,
+                    fecha_oc  = @FechaOc
+                WHERE app = @App COLLATE NOCASE
+                  AND DATE(fecha_ejecucion) = DATE(@FechaSeleccionada)";
 
-            await connection.ExecuteAsync(updateTempSql, new
+            var rowsUpdated = await connection.ExecuteAsync(updateSql, new
             {
                 NumeroOc = numeroOc,
                 EstadoOc = estadoOc,
@@ -134,56 +119,42 @@ public class RetirosAppService : IRetirosAppService
                 FechaSeleccionada = fechaSeleccionada
             }, transaction);
 
-            var insertFinalSql = @"
-            INSERT INTO retiro_apps (
-                fecha_ejecucion,
-                app,
-                cedula_app,
-                cedula_consolidado,
-                login_consolidado,
-                login_app,
-                nombre_consolidado,
-                estado_app,
-                estado_consolidado,
-                fecha_retiro,
-                tipo_cruce,
-                numero_oc,
-                fecha_oc,
-                estado_oc,
-                validacion_estado
-            )
-            SELECT
-                fecha_ejecucion,
-                app,
-                cedula_app,
-                cedula_consolidado,
-                login_consolidado,
-                login_app,
-                nombre_consolidado,
-                estado_app,
-                estado_consolidado,
-                fecha_retiro,
-                tipo_cruce,
-                numero_oc,
-                fecha_oc,
-                estado_oc,
-                validacion_estado
-            FROM retiro_app_temp
-            WHERE app = @App
-              AND fecha_retiro = @FechaSeleccionada";
+            if (rowsUpdated == 0)
+            {
+                transaction.Rollback();
+                return false;
+            }
 
-            await connection.ExecuteAsync(insertFinalSql, new
+            // 2. Mover a retiro_app (histórico definitivo)
+            var insertSql = @"
+                INSERT INTO retiro_app (
+                    fecha_ejecucion, app, cedula_app, cedula_consolidado,
+                    login_consolidado, login_app, nombre_consolidado,
+                    estado_app, estado_consolidado, fecha_retiro,
+                    tipo_cruce, numero_oc, fecha_oc, estado_oc, validacion_estado
+                )
+                SELECT
+                    fecha_ejecucion, app, cedula_app, cedula_consolidado,
+                    login_consolidado, login_app, nombre_consolidado,
+                    estado_app, estado_consolidado, fecha_retiro,
+                    tipo_cruce, numero_oc, fecha_oc, estado_oc, validacion_estado
+                FROM retiro_app_temp
+                WHERE app = @App COLLATE NOCASE
+                  AND DATE(fecha_ejecucion) = DATE(@FechaSeleccionada)";
+
+            await connection.ExecuteAsync(insertSql, new
             {
                 App = app,
                 FechaSeleccionada = fechaSeleccionada
             }, transaction);
 
-            var deleteTempSql = @"
-            DELETE FROM retiro_app_temp
-            WHERE app = @App
-              AND fecha_retiro = @FechaSeleccionada";
+            // 3. Eliminar de temp
+            var deleteSql = @"
+                DELETE FROM retiro_app_temp
+                WHERE app = @App COLLATE NOCASE
+                  AND DATE(fecha_ejecucion) = DATE(@FechaSeleccionada)";
 
-            await connection.ExecuteAsync(deleteTempSql, new
+            await connection.ExecuteAsync(deleteSql, new
             {
                 App = app,
                 FechaSeleccionada = fechaSeleccionada
@@ -198,6 +169,4 @@ public class RetirosAppService : IRetirosAppService
             throw;
         }
     }
-
-
 }

@@ -1,0 +1,25 @@
+@page "/uam3/service-desk-bd"
+@using Data.Interfaces.CapaApp.IServiceDesk
+@using Radzen
+@inject NotificationService NotificationService
+
+<PageTitle>Uam3 - Service Desk BD</PageTitle>
+
+<RadzenStack Orientation="Orientation.Vertical" Gap="1rem">
+    <RadzenText Text="Gestión de Retiros — Capa Base de Datos" TextStyle="TextStyle.H4" />
+    <RadzenText Text="Administración de usuarios retirados y generación de OC." TextStyle="TextStyle.Body1" />
+
+    <RadzenTabs RenderMode="TabRenderMode.Client">
+        <Tabs>
+            <RadzenTabsItem Text="Crear OC">
+                <CrearOCBD />
+            </RadzenTabsItem>
+            <RadzenTabsItem Text="Validar OC">
+                <ValidarOcBD />
+            </RadzenTabsItem>
+            <RadzenTabsItem Text="Agregar Manual">
+                <CargaManualOcBD />
+            </RadzenTabsItem>
+        </Tabs>
+    </RadzenTabs>
+</RadzenStack>

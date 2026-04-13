@@ -1,0 +1,16 @@
+@using Data.Interfaces.CapaApp.IServiceDesk
+@using Shared.CapaAplicacion.UserDisable
+@using Radzen
+@inject IRetirosDbService RetirosDbService
+@inject NotificationService NotificationService
+
+<div>
+    <RadzenStack Orientation="Orientation.Vertical" Gap="1rem">
+        <RadzenText Text="Validación de OC — Capa Base de Datos" TextStyle="TextStyle.H6" />
+        <RadzenAlert Severity="AlertSeverity.Info" AllowClose="false" Variant="Variant.Flat">
+            La validación automática estará disponible cuando se integre el robot Selenium. Por ahora use <strong>Agregar Manual</strong> para actualizar el estado de la OC.
+        </RadzenAlert>
+    </RadzenStack>
+</div>
+
+@code { }
