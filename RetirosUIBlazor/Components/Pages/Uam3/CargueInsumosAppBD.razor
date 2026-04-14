@@ -1,0 +1,213 @@
+@page "/uam3/cargue-insumos-bd"
+@using Data.Interfaces.CapaApp.Uam3.IAppInsumosRobot
+@using Data.Interfaces.CapaApp.Uam3.IDataInsumosRobot
+@using Microsoft.AspNetCore.Components.Forms
+@inject IAppInsumosRobot RobotService
+@inject IDataInsumosRobot DatosRepo
+@inject NotificationService NotificationService
+
+<PageTitle>Cargue Insumos — Capa Base de Datos</PageTitle>
+
+<style>
+    .ci-title { font-size:22px; font-weight:800; color:#fff; margin-bottom:4px; }
+    .ci-breadcrumb { font-size:12px; color:#6b7280; margin-bottom:20px; }
+    .ci-alert { background:rgba(245,158,11,.08); border:1px solid rgba(245,158,11,.25); border-left:4px solid #f59e0b; border-radius:10px; padding:14px 16px; display:flex; gap:12px; align-items:flex-start; margin-bottom:20px; }
+    .ci-alert-title { font-size:13px; font-weight:700; color:#f59e0b; margin-bottom:3px; }
+    .ci-alert-text { font-size:13px; color:#d1a84a; line-height:1.5; }
+    .ci-manual-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:20px; }
+    .ci-upload-card { background:#1a1d27; border:1px solid #2d3148; border-radius:10px; overflow:hidden; }
+    .ci-upload-card-hdr { padding:10px 14px; display:flex; align-items:center; gap:8px; }
+    .ci-upload-card-icon { width:26px; height:26px; border-radius:7px; display:flex; align-items:center; justify-content:center; font-size:13px; background:rgba(99,102,241,.12); flex-shrink:0; }
+    .ci-upload-card-name { font-size:13px; font-weight:600; color:#e2e8f0; flex:1; }
+    .ci-upload-body { padding:8px 14px 10px; border-top:1px solid #2d3148; }
+    .ci-file-input { display:none; }
+    .ci-file-label { background:#252840; color:#9ca3af; border:1px solid #2d3148; padding:6px 12px; border-radius:7px; font-size:11px; font-weight:500; cursor:pointer; display:inline-flex; align-items:center; gap:5px; transition:all .15s; }
+    .ci-file-label:hover { border-color:#6366f1; color:#a5b4fc; }
+    .ci-file-pill { background:rgba(99,102,241,.1); border:1px solid rgba(99,102,241,.25); border-radius:6px; padding:4px 10px; font-size:11px; color:#a5b4fc; display:flex; align-items:center; gap:5px; margin-bottom:5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .ci-upload-actions { display:flex; gap:6px; margin-top:5px; }
+    .ci-btn-p { background:linear-gradient(135deg,#6366f1,#8b5cf6); color:#fff; border:none; padding:6px 12px; border-radius:7px; font-size:11px; font-weight:600; cursor:pointer; transition:all .15s; display:inline-flex; align-items:center; gap:4px; }
+    .ci-btn-p:hover:not(:disabled) { opacity:.88; }
+    .ci-btn-p:disabled { opacity:.4; cursor:not-allowed; }
+    .ci-btn-g { background:#252840; color:#9ca3af; border:1px solid #2d3148; padding:6px 10px; border-radius:7px; font-size:11px; cursor:pointer; }
+    .ci-prog { background:#13151f; border:1px solid #2d3148; border-radius:7px; padding:7px 10px; display:flex; align-items:center; gap:8px; }
+    .ci-spin { width:14px; height:14px; border:2px solid #2d3148; border-top-color:#6366f1; border-radius:50%; animation:spin .7s linear infinite; flex-shrink:0; }
+    @@keyframes spin { to { transform:rotate(360deg); } }
+</style>
+
+<div class="ci-title">Gestión de Insumos — Capa Base de Datos</div>
+<div class="ci-breadcrumb">UAM3 / Capa Base de Datos / Cargue de Insumos</div>
+
+<div class="ci-alert">
+    <span style="font-size:18px;flex-shrink:0;">📋</span>
+    <div>
+        <div class="ci-alert-title">Cargue Manual de Insumos BD</div>
+        <div class="ci-alert-text">Sube el Excel directamente desde tu equipo. El sistema detecta las columnas automáticamente y reemplaza los datos existentes. Columnas requeridas: <strong>BASE_DE_DATOS, USERNAME, ACCOUNT_STATUS</strong></div>
+    </div>
+</div>
+
+<div class="ci-manual-grid">
+    @foreach (var sistema in _sistemas)
+    {
+        var estado = _estadoManual.GetValueOrDefault(sistema.Key, new ManualUploadState());
+        var inputId = $"file-bd-{sistema.Key}";
+
+        <div class="ci-upload-card" @key="sistema.Key">
+            <div class="ci-upload-card-hdr">
+                <div class="ci-upload-card-icon">🗄️</div>
+                <div class="ci-upload-card-name">@sistema.Value</div>
+                @if (_counts.TryGetValue(sistema.Key, out var cnt))
+                {
+                    @if (cnt > 0)
+                    {
+                        <span style="background:rgba(34,197,94,.12);color:#22c55e;font-size:11px;padding:2px 8px;border-radius:20px;font-weight:700;border:1px solid rgba(34,197,94,.2);">✓ @cnt.ToString("N0")</span>
+                    }
+                    else
+                    {
+                        <span style="background:rgba(239,68,68,.12);color:#ef4444;font-size:11px;padding:2px 8px;border-radius:20px;font-weight:700;border:1px solid rgba(239,68,68,.2);">Sin datos</span>
+                    }
+                }
+            </div>
+            <div class="ci-upload-body">
+                @if (estado.IsReading)
+                {
+                    <div class="ci-prog"><div class="ci-spin"></div><span style="font-size:11px;color:#9ca3af;">Leyendo...</span></div>
+                }
+                else if (estado.Data == null)
+                {
+                    <InputFile id="@inputId" accept=".xlsx" class="ci-file-input"
+                               @key="@($"input-bd-{sistema.Key}")"
+                               OnChange="@(e => OnFileChange(e, sistema.Key))"
+                               disabled="@estado.IsProcessing" />
+                    <label for="@inputId" class="ci-file-label">📁 Seleccionar archivo</label>
+                }
+                else
+                {
+                    <div class="ci-file-pill">📄 @estado.FileName</div>
+                    @if (estado.IsProcessing)
+                    {
+                        <div class="ci-prog"><div class="ci-spin"></div><span style="font-size:11px;color:#9ca3af;">Cargando...</span></div>
+                    }
+                    else
+                    {
+                        <div class="ci-upload-actions">
+                            <button class="ci-btn-p" disabled="@estado.IsProcessing" @onclick="@(() => CargarArchivo(sistema.Key))">☁️ Cargar</button>
+                            <button class="ci-btn-g" @onclick="@(() => Limpiar(sistema.Key))">✕</button>
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private static readonly Dictionary<string, string> _sistemas = new()
+    {
+        { "bd_siebel",   "BD Siebel"   }, { "bd_portal",   "BD Portal"   },
+        { "bd_dwh_fijo", "BD DWH Fijo" }, { "bd_dwh_movil","BD DWH Móvil"},
+        { "bd_fenix",    "BD Fénix"    }, { "bd_open",     "BD Open"     },
+        { "bd_sap_erp",  "BD SAP ERP"  }, { "bd_sap_grc",  "BD SAP GRC"  },
+        { "bd_iam",      "BD IAM"      }, { "bd_orion",    "BD Orion"    },
+        { "bd_the",      "BD THE"      }, { "bd_cbs",      "BD CBS"      },
+        { "bd_cm",       "BD CM"       }
+    };
+
+    private class ManualUploadState
+    {
+        public MemoryStream? Data { get; set; }
+        public string? FileName { get; set; }
+        public bool IsProcessing { get; set; }
+        public bool IsReading { get; set; }
+    }
+
+    private Dictionary<string, ManualUploadState> _estadoManual = new();
+    private Dictionary<string, int> _counts = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        foreach (var k in _sistemas.Keys)
+            _estadoManual[k] = new ManualUploadState();
+        await CargarCounts();
+    }
+
+    private async Task CargarCounts()
+    {
+        await Task.Run(() =>
+        {
+            foreach (var k in _sistemas.Keys)
+            {
+                try { _counts[k] = DatosRepo.ObtenerDatosPaginados(k, 0, 1, null, null).TotalRegistros; }
+                catch { _counts[k] = -1; }
+            }
+        });
+        StateHasChanged();
+    }
+
+    private async Task OnFileChange(InputFileChangeEventArgs e, string key)
+    {
+        var file = e.File;
+        if (file == null) return;
+
+        _estadoManual[key].FileName = file.Name;
+        _estadoManual[key].IsReading = true;
+        _estadoManual[key].Data = null;
+        StateHasChanged();
+
+        try
+        {
+            var ms = new MemoryStream();
+            await using var stream = file.OpenReadStream(maxAllowedSize: 100 * 1024 * 1024);
+            await stream.CopyToAsync(ms);
+            ms.Position = 0;
+            _estadoManual[key].Data = ms;
+        }
+        catch (Exception ex)
+        {
+            _estadoManual[key].Data = null;
+            _estadoManual[key].FileName = null;
+            NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Error, Summary = "Error al leer", Detail = ex.Message, Duration = 5000 });
+        }
+
+        _estadoManual[key].IsReading = false;
+        StateHasChanged();
+    }
+
+    private async Task CargarArchivo(string key)
+    {
+        var estado = _estadoManual[key];
+        if (estado.Data == null) return;
+
+        estado.IsProcessing = true;
+        StateHasChanged();
+
+        try
+        {
+            estado.Data.Position = 0;
+            await RobotService.ImportarArchivoManual(estado.Data, estado.FileName!, key);
+
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Success,
+                Summary  = "Cargue Exitoso",
+                Detail   = $"{_sistemas[key]} cargado correctamente en tabla '{key}'.",
+                Duration = 4000
+            });
+
+            _estadoManual[key] = new ManualUploadState();
+            try { _counts[key] = DatosRepo.ObtenerDatosPaginados(key, 0, 1, null, null).TotalRegistros; } catch { }
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Error, Summary = "Error al cargar", Detail = ex.Message, Duration = 6000 });
+            estado.IsProcessing = false;
+        }
+
+        StateHasChanged();
+    }
+
+    private void Limpiar(string key)
+    {
+        _estadoManual[key] = new ManualUploadState();
+        StateHasChanged();
+    }
+}

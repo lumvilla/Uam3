@@ -1,0 +1,182 @@
+@using Data.Interfaces.CapaApp.IServiceDesk
+@using Shared.CapaAplicacion.UserDisable
+@using Radzen
+@using Data.Interfaces.CapaApp.IServicesCrucesExcel
+@inject IRetirosNoSoxService RetirosNoSoxService
+@inject NotificationService NotificationService
+
+<div>
+    <RadzenStack Orientation="Orientation.Vertical" Gap="1rem">
+        <RadzenText Text="Carga Manual de OC — No Sox" TextStyle="TextStyle.H6" />
+
+        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="1rem">
+            <RadzenButton Text="@(isLoadingData ? "Cargando..." : "Cargar Datos")"
+                          ButtonStyle="ButtonStyle.Primary" Icon="@(isLoadingData ? "hourglass_empty" : "refresh")"
+                          Click="CargarDatos" Disabled="@isLoadingData" Size="ButtonSize.Medium" />
+            @if (ultimaCarga != null) { <RadzenText TextStyle="TextStyle.Caption" Text="@($"Última carga: {ultimaCarga.Value:dd/MM/yyyy HH:mm:ss}")" /> }
+            @if (hayDatos) { <RadzenText TextStyle="TextStyle.Subtitle2" Text="@($"Total: {totalRegistros}")" class="rz-color-success" /> }
+        </RadzenStack>
+
+        @if (!hayDatos && !isLoadingData)
+        {
+            <RadzenAlert Severity="AlertSeverity.Info" AllowClose="false" Variant="Variant.Flat">
+                No hay datos. Haga clic en "Cargar Datos".
+            </RadzenAlert>
+        }
+
+        @if (hayDatos)
+        {
+            <div class="rz-p-sm-12">
+                <RadzenAccordion Multiple="true">
+                    <Items>
+                        @RenderAccordion("nosox_gtc",          "GTC",          "settings_input_component")
+                        @RenderAccordion("nosox_open_edatel",  "Open Edatel",  "settings_input_component")
+                        @RenderAccordion("nosox_open_etp",     "Open ETP",     "settings_input_component")
+                        @RenderAccordion("nosox_osm",          "OSM",          "hub")
+                        @RenderAccordion("nosox_mss",          "MSS",          "cloud")
+                        @RenderAccordion("nosox_tigo_gestion", "Tigo Gestión", "business")
+                        @RenderAccordion("nosox_viafirma",     "Viafirma",     "verified")
+                        @RenderAccordion("nosox_maebog1",      "MAE BOG1",     "storage")
+                        @RenderAccordion("nosox_maebog2",      "MAE BOG2",     "storage")
+                        @RenderAccordion("nosox_maebaq",       "MAE BAQ",      "storage")
+                        @RenderAccordion("nosox_maecore",      "MAE CORE",     "storage")
+                        @RenderAccordion("nosox_service_desk", "Service Desk", "support_agent")
+                    </Items>
+                </RadzenAccordion>
+            </div>
+        }
+    </RadzenStack>
+</div>
+
+@code {
+    private bool isLoadingData = false;
+    private bool hayDatos = false;
+    private DateTime? ultimaCarga;
+    private int totalRegistros = 0;
+
+    private Dictionary<string, bool>   processingByApp  = new(StringComparer.OrdinalIgnoreCase);
+    private Dictionary<string, string> selectedFecha    = new(StringComparer.OrdinalIgnoreCase);
+    private Dictionary<string, string> numeroOCManual   = new(StringComparer.OrdinalIgnoreCase);
+    private Dictionary<string, string> estadoOCManual   = new(StringComparer.OrdinalIgnoreCase);
+    private Dictionary<string, IEnumerable<RetirosUserApp>> datos = new(StringComparer.OrdinalIgnoreCase);
+
+    private static readonly string[] _apps = {
+        "nosox_gtc","nosox_open_edatel","nosox_open_etp","nosox_osm","nosox_mss",
+        "nosox_tigo_gestion","nosox_viafirma",
+        "nosox_maebog1","nosox_maebog2","nosox_maebaq","nosox_maecore","nosox_service_desk"
+    };
+
+    protected override void OnInitialized()
+    {
+        foreach (var a in _apps)
+        {
+            processingByApp[a] = false; selectedFecha[a] = "";
+            numeroOCManual[a]  = ""; estadoOCManual[a]  = "";
+            datos[a]           = Enumerable.Empty<RetirosUserApp>();
+        }
+    }
+
+    private RenderFragment RenderAccordion(string app, string label, string icon)
+    {
+        var data = datos.GetValueOrDefault(app, Enumerable.Empty<RetirosUserApp>());
+        return @<RadzenAccordionItem Text="@($"{label} - Total: {data?.Count() ?? 0}")" Icon="@icon">
+            <RadzenStack Gap="0.5rem">
+                @RenderSeccion(app)
+                @RenderGrid(data)
+            </RadzenStack>
+        </RadzenAccordionItem>;
+    }
+
+    private IEnumerable<string> GetFechas(string app)
+    {
+        var d = datos.GetValueOrDefault(app);
+        if (d == null || !d.Any()) return Enumerable.Empty<string>();
+        return d.Select(x => x.FechaEjecucion.ToString("yyyy-MM-dd")).Distinct().OrderByDescending(x => x).ToList();
+    }
+
+    private RenderFragment RenderSeccion(string app)
+    {
+        var fechas   = GetFechas(app).ToList();
+        var fechaSel = selectedFecha.GetValueOrDefault(app, "");
+        var numOC    = numeroOCManual.GetValueOrDefault(app, "");
+        var estOC    = estadoOCManual.GetValueOrDefault(app, "");
+        var disabled = processingByApp.GetValueOrDefault(app,false) || !hayDatos ||
+                       string.IsNullOrEmpty(fechaSel) || string.IsNullOrWhiteSpace(numOC) || string.IsNullOrWhiteSpace(estOC);
+
+        return @<div style="background:#1a1d27;border:1px solid #2d3148;border-radius:8px;padding:14px;margin-bottom:12px;">
+            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="1rem" Wrap="FlexWrap.Wrap">
+                @if (fechas.Any())
+                {
+                    <RadzenDropDown @bind-Value="selectedFecha[app]" Data="@fechas"
+                                    Placeholder="Fecha" Style="width:160px;" Change="@(() => StateHasChanged())" />
+                }
+                <RadzenTextBox @bind-Value="numeroOCManual[app]" Placeholder="Número OC" Style="width:200px;" Change="@(() => StateHasChanged())" />
+                <RadzenDropDown @bind-Value="estadoOCManual[app]"
+                                Data="@(new[]{"PENDIENTE","EN_PROCESO","APROBADA","COMPLETADA","RECHAZADA"})"
+                                Placeholder="Estado OC" Style="width:160px;" Change="@(() => StateHasChanged())" />
+                <RadzenButton Text="@(processingByApp.GetValueOrDefault(app,false) ? "Guardando..." : "Guardar OC")"
+                              ButtonStyle="ButtonStyle.Success" Icon="save" Size="ButtonSize.Small"
+                              Disabled="@disabled" Click="@(() => GuardarOC(app))" />
+            </RadzenStack>
+        </div>;
+    }
+
+    private RenderFragment RenderGrid(IEnumerable<RetirosUserApp> data) =>
+        @<RadzenDataGrid Data="@(data ?? Enumerable.Empty<RetirosUserApp>())" TItem="RetirosUserApp"
+                         AllowFiltering="true" AllowSorting="true" AllowPaging="true" PageSize="10"
+                         Density="Density.Compact" EmptyText="No hay registros"
+                         FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive">
+            <Columns>
+                <RadzenDataGridColumn TItem="RetirosUserApp" Property="FechaEjecucion" Title="Fecha Ejec." Width="120px" />
+                <RadzenDataGridColumn TItem="RetirosUserApp" Property="CedulaConsolidado" Title="Cédula" Width="120px" />
+                <RadzenDataGridColumn TItem="RetirosUserApp" Property="LoginConsolidado" Title="Login Consol." Width="140px" />
+                <RadzenDataGridColumn TItem="RetirosUserApp" Property="LoginApp" Title="Login App" Width="140px" />
+                <RadzenDataGridColumn TItem="RetirosUserApp" Property="NombreConsolidado" Title="Nombre" Width="180px" />
+                <RadzenDataGridColumn TItem="RetirosUserApp" Property="EstadoApp" Title="Estado App" Width="140px" />
+                <RadzenDataGridColumn TItem="RetirosUserApp" Property="FechaRetiro" Title="F. Retiro" Width="100px" />
+                <RadzenDataGridColumn TItem="RetirosUserApp" Property="NumeroOc" Title="N° OC" Width="110px" />
+                <RadzenDataGridColumn TItem="RetirosUserApp" Property="EstadoOc" Title="Estado OC" Width="110px" />
+            </Columns>
+        </RadzenDataGrid>;
+
+    private async Task CargarDatos()
+    {
+        isLoadingData = true; StateHasChanged();
+        try
+        {
+            var todos = await RetirosNoSoxService.ObtenerDatosTemporalesNoSox();
+            if (todos != null && todos.Any())
+            {
+                foreach (var a in _apps)
+                    datos[a] = todos.Where(x => x.App?.Equals(a, StringComparison.OrdinalIgnoreCase) == true);
+                totalRegistros = todos.Count(); hayDatos = true; ultimaCarga = DateTime.Now;
+                NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Success, Summary = "Cargado", Detail = $"{totalRegistros} registros.", Duration = 4000 });
+            }
+            else
+            {
+                hayDatos = false;
+                NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Info, Summary = "Sin datos", Detail = "No hay datos temporales No Sox.", Duration = 3000 });
+            }
+        }
+        catch (Exception ex) { NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Error, Summary = "Error", Detail = ex.Message, Duration = 8000 }); }
+        finally { isLoadingData = false; StateHasChanged(); }
+    }
+
+    private async Task GuardarOC(string app)
+    {
+        processingByApp[app] = true; StateHasChanged();
+        try
+        {
+            var ok = await RetirosNoSoxService.GuardarOCManualNoSox(app, selectedFecha[app], numeroOCManual[app], estadoOCManual[app], DateTime.Now.ToString("yyyy-MM-dd"));
+            if (ok)
+            {
+                numeroOCManual[app] = ""; estadoOCManual[app] = "";
+                await CargarDatos();
+                NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Success, Summary = "Guardado", Detail = $"OC guardada para {app}.", Duration = 4000 });
+            }
+            else { NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Sin cambios", Detail = "No se encontraron registros.", Duration = 3000 }); }
+        }
+        catch (Exception ex) { NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Error, Summary = "Error", Detail = ex.Message, Duration = 8000 }); }
+        finally { processingByApp[app] = false; StateHasChanged(); }
+    }
+}

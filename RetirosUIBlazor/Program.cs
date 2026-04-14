@@ -141,6 +141,7 @@ builder.Services.AddScoped<IRetirosDbService, RetirosDbService>();
 builder.Services.AddScoped<ICrucesExcelNoSox, CrucesUserDisableNoSox>();
 builder.Services.AddScoped<ICrucesDisplayServiceNoSox, CrucesDisplayServiceNoSox>();
 builder.Services.AddScoped<IRetirosNoSoxService, RetirosNoSoxService>();
+
 // Registrar Radzen Blazor Components y DI
 builder.Services.AddRadzenComponents();
 builder.Services.AddScoped<DialogService>();
@@ -151,7 +152,7 @@ builder.Services.AddScoped<ContextMenuService>();
 // ✅ CORRECTO - Configura el modo interactivo como predeterminado
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents()
-    .AddCircuitOptions(options => options.DetailedErrors = true) // <--- AGREGA ESTO
+    .AddCircuitOptions(options => options.DetailedErrors = true) 
     .AddHubOptions(options =>
     {
         options.MaximumReceiveMessageSize = 10 * 1024 * 1024; // 10MB

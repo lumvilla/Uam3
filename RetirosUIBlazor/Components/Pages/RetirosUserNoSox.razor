@@ -1,0 +1,20 @@
+@page "/nosox/sd/realizar-oc"
+@using Radzen
+
+<RadzenStack Orientation="Orientation.Vertical" Gap="1rem">
+    <RadzenText Text="Gestión de Retiros — No Sox" TextStyle="TextStyle.H4" />
+    <RadzenText Text="Administración de usuarios retirados y generación de OC." TextStyle="TextStyle.Body1" />
+    <RadzenTabs RenderMode="TabRenderMode.Client">
+        <Tabs>
+            <RadzenTabsItem Text="Crear OC">
+                <CrearOCNoSox />
+            </RadzenTabsItem>
+            <RadzenTabsItem Text="Validar OC">
+                <ValidarOcNoSox />
+            </RadzenTabsItem>
+            <RadzenTabsItem Text="Agregar Manual">
+                <CargaManualOcNoSox />
+            </RadzenTabsItem>
+        </Tabs>
+    </RadzenTabs>
+</RadzenStack>

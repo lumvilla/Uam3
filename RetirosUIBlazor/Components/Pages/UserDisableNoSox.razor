@@ -1,0 +1,307 @@
+@page "/nosox/user-disable"
+@using Data.Interfaces.CapaApp.IServicesCrucesExcel
+@using Shared.CapaAplicacion.UserDisable
+@using Radzen
+@inject ICrucesExcelNoSox UserDisableService
+@inject ICrucesDisplayServiceNoSox DisplayService
+@inject NotificationService NotificationService
+@inject ICrucesExcelNoSox UserDisableService
+@inject ICrucesDisplayServiceNoSox DisplayService
+
+<PageTitle>Retiros No Sox - Usuarios a Deshabilitar</PageTitle>
+
+<style>
+    .rz-accordion .rz-accordion-header { background:#1a1d27 !important; border:1px solid #2d3148 !important; color:#fff !important; }
+    .rz-accordion .rz-accordion-header:hover { background:#252840 !important; }
+    .rz-accordion .rz-accordion-header * { color:#fff !important; }
+    .rz-accordion .rz-accordion-header .rz-icon { color:#6366f1 !important; }
+    .rz-accordion .rz-accordion-content { background:#13151f !important; border:1px solid #2d3148 !important; border-top:none !important; }
+    .rz-tabview .rz-tabview-nav { background:#1a1d27 !important; border-bottom:1px solid #2d3148 !important; }
+    .rz-tabview .rz-tabview-nav li a { color:#9ca3af !important; }
+    .rz-tabview .rz-tabview-nav li.rz-state-active a { color:#6366f1 !important; border-bottom:2px solid #6366f1 !important; }
+    .rz-tabview .rz-tabview-panels { background:#13151f !important; border:1px solid #2d3148 !important; border-top:none !important; }
+    .rz-data-grid { background:#1a1d27 !important; border:1px solid #2d3148 !important; }
+    .rz-column-header { background:#13151f !important; color:#6b7280 !important; font-size:11px !important; font-weight:600 !important; text-transform:uppercase !important; border-color:#2d3148 !important; }
+    .rz-column-header-title { color:#6b7280 !important; }
+    .rz-data-row td { background:#1a1d27 !important; color:#d1d5db !important; border-color:#1e2035 !important; font-size:12px !important; }
+    .rz-data-row:hover td { background:#1e2035 !important; }
+    .rz-paginator { background:#1a1d27 !important; border-top:1px solid #2d3148 !important; color:#6b7280 !important; }
+    .rz-paginator .rz-paginator-element { background:#13151f !important; border:1px solid #2d3148 !important; color:#9ca3af !important; border-radius:6px !important; }
+    .rz-paginator .rz-state-highlight { background:#6366f1 !important; border-color:#6366f1 !important; color:#fff !important; }
+    .rz-dropdown { background:#13151f !important; border:1px solid #2d3148 !important; color:#e2e8f0 !important; }
+    .rz-dropdown * { color:#e2e8f0 !important; }
+    .rz-dropdown-panel { background:#1a1d27 !important; border:1px solid #2d3148 !important; }
+    .rz-dropdown-item { color:#d1d5db !important; }
+    .rz-dropdown-item:hover { background:#252840 !important; }
+    .rz-dropdown-item.rz-state-highlight { background:#6366f1 !important; color:#fff !important; }
+    .rz-color-success { color:#22c55e !important; }
+    .rz-color-info { color:#60a5fa !important; }
+    .rz-color-info-dark { color:#818cf8 !important; }
+    .rz-color-warning { color:#f59e0b !important; }
+</style>
+
+<RadzenStack Orientation="Orientation.Vertical" Gap="1rem">
+    <RadzenText Text="Usuarios a Deshabilitar — Retiros No Sox" TextStyle="TextStyle.H4" />
+    <RadzenText Text="Generación de reportes de usuarios a deshabilitar por sistema No Sox." TextStyle="TextStyle.Body1" />
+
+    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="1rem">
+        <RadzenButton Text="@(isProcessing ? "Procesando..." : "Generar Usuarios Disable")"
+                      ButtonStyle="ButtonStyle.Danger"
+                      Icon="@(isProcessing ? "hourglass_empty" : "sync")"
+                      Click="ProcesarUsuarios" Disabled="@isProcessing" Size="ButtonSize.Medium" />
+        @if (ultimoProceso != null)
+        {
+            <RadzenText TextStyle="TextStyle.Caption" Text="@($"última ejecución: {ultimoProceso.Value:dd/MM/yyyy HH:mm:ss}")" />
+        }
+    </RadzenStack>
+
+    @if (isProcessing)
+    {
+        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
+            <RadzenProgressBar Value="100" ShowValue="false" Mode="ProgressBarMode.Indeterminate" Style="width:300px;" />
+            <RadzenText Text="Cargando datos..." TextStyle="TextStyle.Body2" />
+        </RadzenStack>
+    }
+
+    <div class="rz-p-sm-12">
+        <RadzenAccordion Multiple="true">
+            <Items>
+                @* Grupo A *@
+                @RenderAccordion("nosox_gtc",          "GTC",          "settings_input_component", datos["nosox_gtc"])
+                @RenderAccordion("nosox_open_edatel",  "Open Edatel",  "settings_input_component", datos["nosox_open_edatel"])
+                @RenderAccordion("nosox_open_etp",     "Open ETP",     "settings_input_component", datos["nosox_open_etp"])
+                @RenderAccordion("nosox_osm",          "OSM",          "hub",                      datos["nosox_osm"])
+                @RenderAccordion("nosox_mss",          "MSS",          "cloud",                    datos["nosox_mss"])
+                @RenderAccordion("nosox_tigo_gestion", "Tigo Gestión", "business",                 datos["nosox_tigo_gestion"])
+                @RenderAccordion("nosox_viafirma",     "Viafirma",     "verified",                 datos["nosox_viafirma"])
+                @* Grupo B *@
+                @RenderAccordion("nosox_maebog1",      "MAE BOG1",     "storage",                  datos["nosox_maebog1"])
+                @RenderAccordion("nosox_maebog2",      "MAE BOG2",     "storage",                  datos["nosox_maebog2"])
+                @RenderAccordion("nosox_maebaq",       "MAE BAQ",      "storage",                  datos["nosox_maebaq"])
+                @RenderAccordion("nosox_maecore",      "MAE CORE",     "storage",                  datos["nosox_maecore"])
+                @* Grupo C *@
+                @RenderAccordion("nosox_service_desk", "Service Desk", "support_agent",            datos["nosox_service_desk"])
+            </Items>
+        </RadzenAccordion>
+    </div>
+</RadzenStack>
+
+@code {
+    private bool isProcessing = false;
+    private bool dataLoaded   = false;
+    private DateTime? ultimoProceso;
+
+    private Dictionary<string, bool>   processingByApp  = new(StringComparer.OrdinalIgnoreCase);
+    private Dictionary<string, string> selectedTipoCruce = new(StringComparer.OrdinalIgnoreCase);
+    private Dictionary<string, IEnumerable<UsuarioDisableDto>> datos = new(StringComparer.OrdinalIgnoreCase);
+
+    private static readonly string[] _apps = {
+        "nosox_gtc","nosox_open_edatel","nosox_open_etp","nosox_osm","nosox_mss",
+        "nosox_tigo_gestion","nosox_viafirma",
+        "nosox_maebog1","nosox_maebog2","nosox_maebaq","nosox_maecore",
+        "nosox_service_desk"
+    };
+
+    protected override void OnInitialized()
+    {
+        foreach (var a in _apps)
+        {
+            selectedTipoCruce[a] = "AMBOS";
+            processingByApp[a]   = false;
+            datos[a]             = Enumerable.Empty<UsuarioDisableDto>();
+        }
+    }
+
+    private RenderFragment RenderAccordion(string app, string label, string icon, IEnumerable<UsuarioDisableDto> data) =>
+        @<RadzenAccordionItem Text="@($"{label} - Total: {data?.Count() ?? 0}")" Icon="@icon">
+            <RadzenStack Gap="0.5rem">
+                <RadzenText TextStyle="TextStyle.Caption" Text="@($"Total registros: {data?.Count() ?? 0}")" />
+                @RenderSeccion(app, data)
+                <RadzenTabs RenderMode="TabRenderMode.Client">
+                    <Tabs>
+                        <RadzenTabsItem Text="Por Login">
+                            <RadzenStack Gap="0.5rem">
+                                <RadzenText TextStyle="TextStyle.Caption" Text="@($"Registros: {data?.Count(x => x.TipoCruce == "LOGIN") ?? 0}")" class="rz-color-success" />
+                                @RenderDataGrid(data?.Where(x => x.TipoCruce == "LOGIN"))
+                            </RadzenStack>
+                        </RadzenTabsItem>
+                        <RadzenTabsItem Text="Por Cedula">
+                            <RadzenStack Gap="0.5rem">
+                                <RadzenText TextStyle="TextStyle.Caption" Text="@($"Registros: {data?.Count(x => x.TipoCruce == "CEDULA") ?? 0}")" class="rz-color-info" />
+                                <RadzenAlert Severity="AlertSeverity.Info" AllowClose="false" Variant="Variant.Flat" Size="AlertSize.ExtraSmall">
+                                    Estos usuarios coinciden por numero de documento pero su Login no coincidía o era diferente.
+                                </RadzenAlert>
+                                @RenderDataGrid(data?.Where(x => x.TipoCruce == "CEDULA"))
+                            </RadzenStack>
+                        </RadzenTabsItem>
+                    </Tabs>
+                </RadzenTabs>
+            </RadzenStack>
+        </RadzenAccordionItem>;
+
+    private RenderFragment RenderSeccion(string app, IEnumerable<UsuarioDisableDto> data) => builder =>
+    {
+        int seq = 0;
+        builder.OpenElement(seq++, "div");
+        builder.AddAttribute(seq++, "style", "background:#1a1d27;border:1px solid #2d3148;border-radius:8px;padding:14px 16px;margin-bottom:12px;");
+        builder.OpenComponent<RadzenStack>(seq++);
+        builder.AddAttribute(seq++, "Orientation", Orientation.Horizontal);
+        builder.AddAttribute(seq++, "AlignItems", AlignItems.Center);
+        builder.AddAttribute(seq++, "Gap", "1rem");
+        builder.AddAttribute(seq++, "ChildContent", (RenderFragment)((sb) =>
+        {
+            int s = 0;
+            sb.OpenComponent<RadzenText>(s++);
+            sb.AddAttribute(s++, "Text", "Procesar:");
+            sb.AddAttribute(s++, "TextStyle", TextStyle.Subtitle2);
+            sb.AddAttribute(s++, "TagName", TagName.H6);
+            sb.CloseComponent();
+
+            sb.OpenComponent<RadzenDropDown<string>>(s++);
+            sb.AddAttribute(s++, "Data", new[] { new { Key="AMBOS",Text="Ambos" }, new { Key="LOGIN",Text="Login" }, new { Key="CEDULA",Text="Cedula" } });
+            sb.AddAttribute(s++, "TextProperty", "Text");
+            sb.AddAttribute(s++, "ValueProperty", "Key");
+            sb.AddAttribute(s++, "Value", selectedTipoCruce.GetValueOrDefault(app, "AMBOS"));
+            sb.AddAttribute(s++, "ValueChanged", EventCallback.Factory.Create<string>(this, (v) => { selectedTipoCruce[app] = v; StateHasChanged(); }));
+            sb.AddAttribute(s++, "Style", "width:200px;");
+            sb.AddAttribute(s++, "Disabled", !dataLoaded);
+            sb.CloseComponent();
+
+            sb.OpenComponent<RadzenButton>(s++);
+            sb.AddAttribute(s++, "Text", processingByApp.GetValueOrDefault(app,false) ? "Procesando..." : "Procesar OC");
+            sb.AddAttribute(s++, "ButtonStyle", ButtonStyle.Success);
+            sb.AddAttribute(s++, "Icon", processingByApp.GetValueOrDefault(app,false) ? "hourglass_empty" : "playlist_add_check");
+            sb.AddAttribute(s++, "Size", ButtonSize.Small);
+            sb.AddAttribute(s++, "Disabled", processingByApp.GetValueOrDefault(app,false) || !dataLoaded);
+            sb.AddAttribute(s++, "Click", EventCallback.Factory.Create<MouseEventArgs>(this, async () => await ProcesarOC(app)));
+            sb.CloseComponent();
+
+            if (!dataLoaded)
+            {
+                sb.OpenComponent<RadzenText>(s++);
+                sb.AddAttribute(s++, "Text", "Ejecute 'Generar Usuarios Disable' primero.");
+                sb.AddAttribute(s++, "TextStyle", TextStyle.Caption);
+                sb.AddAttribute(s++, "class", "rz-color-warning");
+                sb.CloseComponent();
+            }
+        }));
+        builder.CloseComponent();
+        builder.CloseElement();
+    };
+
+    private RenderFragment RenderDataGrid(IEnumerable<UsuarioDisableDto> data) => builder =>
+    {
+        if (data == null) data = Enumerable.Empty<UsuarioDisableDto>();
+        int seq = 0;
+        builder.OpenComponent<RadzenDataGrid<UsuarioDisableDto>>(seq++);
+        builder.AddAttribute(seq++, "Data", data);
+        builder.AddAttribute(seq++, "AllowFiltering", true);
+        builder.AddAttribute(seq++, "AllowSorting", true);
+        builder.AddAttribute(seq++, "AllowPaging", true);
+        builder.AddAttribute(seq++, "PageSize", 10);
+        builder.AddAttribute(seq++, "AllowColumnResize", true);
+        builder.AddAttribute(seq++, "Density", Density.Compact);
+        builder.AddAttribute(seq++, "EmptyText", "No hay registros para mostrar");
+        builder.AddAttribute(seq++, "FilterCaseSensitivity", FilterCaseSensitivity.CaseInsensitive);
+        builder.AddAttribute(seq++, "Columns", (RenderFragment)((cb) =>
+        {
+            int c = 0;
+            void Col(string prop, string title, string width)
+            {
+                cb.OpenComponent<RadzenDataGridColumn<UsuarioDisableDto>>(c++);
+                cb.AddAttribute(c++, "Property", prop);
+                cb.AddAttribute(c++, "Title", title);
+                cb.AddAttribute(c++, "Width", width);
+                cb.AddAttribute(c++, "Filterable", true);
+                cb.AddAttribute(c++, "Sortable", true);
+                cb.CloseComponent();
+            }
+            Col("CedulaApp",        "Cédula App",         "120px");
+            Col("CedulaConsolidado","Cédula Consolidado", "120px");
+            Col("LoginApp",         "Login App",          "150px");
+            Col("LoginConsolidado", "Login Consolidado",  "150px");
+            Col("NombreConsolidado","Nombre",             "200px");
+            Col("EstadoApp",        "Estado App",         "150px");
+            Col("EstadoConsolidado","Estado Consolidado", "120px");
+            Col("FechaRetiro",      "Fecha Retiro",       "120px");
+            Col("TipoCruce",        "Tipo Cruce",         "100px");
+        }));
+        builder.CloseComponent();
+    };
+
+    private async Task ProcesarUsuarios()
+    {
+        isProcessing = true; StateHasChanged();
+        await Task.Delay(50);
+        try
+        {
+            datos["nosox_gtc"]          = (await UserDisableService.UsuariosGtcDisable())          ?? Enumerable.Empty<UsuarioDisableDto>();
+            datos["nosox_open_edatel"]  = (await UserDisableService.UsuariosOpenEdatelDisable())    ?? Enumerable.Empty<UsuarioDisableDto>();
+            datos["nosox_open_etp"]     = (await UserDisableService.UsuariosOpenEtpDisable())       ?? Enumerable.Empty<UsuarioDisableDto>();
+            datos["nosox_osm"]          = (await UserDisableService.UsuariosOsmDisable())           ?? Enumerable.Empty<UsuarioDisableDto>();
+            datos["nosox_mss"]          = (await UserDisableService.UsuariosMssDisable())           ?? Enumerable.Empty<UsuarioDisableDto>();
+            datos["nosox_tigo_gestion"] = (await UserDisableService.UsuariosTigoGestionDisable())   ?? Enumerable.Empty<UsuarioDisableDto>();
+            datos["nosox_viafirma"]     = (await UserDisableService.UsuariosViafirmaDisable())      ?? Enumerable.Empty<UsuarioDisableDto>();
+            datos["nosox_maebog1"]      = (await UserDisableService.UsuariosMaebog1Disable())      ?? Enumerable.Empty<UsuarioDisableDto>();
+            datos["nosox_maebog2"]      = (await UserDisableService.UsuariosMaebog2Disable())      ?? Enumerable.Empty<UsuarioDisableDto>();
+            datos["nosox_maebaq"]       = (await UserDisableService.UsuariosMaebaqDisable())       ?? Enumerable.Empty<UsuarioDisableDto>();
+            datos["nosox_maecore"]      = (await UserDisableService.UsuariosMaecoreDisable())      ?? Enumerable.Empty<UsuarioDisableDto>();
+            datos["nosox_service_desk"] = (await UserDisableService.UsuariosServiceDeskDisable())  ?? Enumerable.Empty<UsuarioDisableDto>();
+
+            ultimoProceso = DateTime.Now;
+            dataLoaded = true;
+            NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Success, Summary = "Proceso Completado", Detail = "Cruces No Sox generados.", Duration = 4000 });
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Error, Summary = "Error", Detail = ex.Message, Duration = 8000 });
+        }
+        finally { isProcessing = false; StateHasChanged(); }
+    }
+
+    private async Task ProcesarOC(string app)
+    {
+        processingByApp[app] = true; StateHasChanged();
+        try
+        {
+            var tipo = selectedTipoCruce.GetValueOrDefault(app, "AMBOS");
+            var ok = await DisplayService.ProcesarUsuariosSeleccionadosNoSox(app, tipo, 50);
+            if (ok)
+            {
+                await RefreshApp(app);
+                NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Success, Summary = "Procesado", Detail = $"Usuarios procesados para {app}.", Duration = 4000 });
+            }
+            else
+            {
+                await RefreshApp(app);
+                NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Info, Summary = "Sin Registros", Detail = $"No hay usuarios para {app}.", Duration = 3000 });
+            }
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Error, Summary = "Error", Detail = ex.Message, Duration = 8000 });
+        }
+        finally { processingByApp[app] = false; StateHasChanged(); }
+    }
+
+    private async Task RefreshApp(string app)
+    {
+        datos[app] = app switch
+        {
+            "nosox_gtc"          => (await UserDisableService.UsuariosGtcDisable())         ?? Enumerable.Empty<UsuarioDisableDto>(),
+            "nosox_open_edatel"  => (await UserDisableService.UsuariosOpenEdatelDisable())   ?? Enumerable.Empty<UsuarioDisableDto>(),
+            "nosox_open_etp"     => (await UserDisableService.UsuariosOpenEtpDisable())      ?? Enumerable.Empty<UsuarioDisableDto>(),
+            "nosox_osm"          => (await UserDisableService.UsuariosOsmDisable())          ?? Enumerable.Empty<UsuarioDisableDto>(),
+            "nosox_mss"          => (await UserDisableService.UsuariosMssDisable())          ?? Enumerable.Empty<UsuarioDisableDto>(),
+            "nosox_tigo_gestion" => (await UserDisableService.UsuariosTigoGestionDisable())  ?? Enumerable.Empty<UsuarioDisableDto>(),
+            "nosox_viafirma"     => (await UserDisableService.UsuariosViafirmaDisable())     ?? Enumerable.Empty<UsuarioDisableDto>(),
+            "nosox_maebog1"      => (await UserDisableService.UsuariosMaebog1Disable())     ?? Enumerable.Empty<UsuarioDisableDto>(),
+            "nosox_maebog2"      => (await UserDisableService.UsuariosMaebog2Disable())     ?? Enumerable.Empty<UsuarioDisableDto>(),
+            "nosox_maebaq"       => (await UserDisableService.UsuariosMaebaqDisable())      ?? Enumerable.Empty<UsuarioDisableDto>(),
+            "nosox_maecore"      => (await UserDisableService.UsuariosMaecoreDisable())     ?? Enumerable.Empty<UsuarioDisableDto>(),
+            "nosox_service_desk" => (await UserDisableService.UsuariosServiceDeskDisable()) ?? Enumerable.Empty<UsuarioDisableDto>(),
+            _ => Enumerable.Empty<UsuarioDisableDto>()
+        };
+        StateHasChanged();
+    }
+}
